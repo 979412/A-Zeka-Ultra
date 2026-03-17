@@ -11,12 +11,10 @@ st.markdown("""
     .stApp { background-color: #fcfcfc; }
     .stChatMessage { border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 15px; border-left: 5px solid #007bff; }
     .main-title { color: #0E1117; text-align: center; font-weight: 900; font-size: 3rem; margin-top: -50px; }
-    .sidebar-info { padding: 10px; background-color: #e9ecef; border-radius: 8px; font-size: 0.9rem; }
 </style>
 """, unsafe_allow_html=True)
 
 # --- 3. BEYİN MƏRKƏZİ ---
-# API Key sabit saxlanıldı
 api_key = "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"
 client = Groq(api_key=api_key)
 
@@ -30,9 +28,7 @@ def encode_image(uploaded_file):
 with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/6134/6134346.png", width=80)
     st.title("A-Zəka Panel")
-    st.markdown("<div class='sidebar-info'><b>Status:</b> Ultra Məntiq Aktiv 🔥</div>", unsafe_allow_html=True)
-    st.write("Bu versiya DeepSeek-R1 məntiqi ilə gücləndirilib.")
-    
+    st.info("Status: **R1-Thinking Aktiv** 🔥")
     if st.button("🗑️ Tarixçəni Sıfırla", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
@@ -52,7 +48,7 @@ for msg in st.session_state.messages:
             st.markdown(msg["content"])
 
 # --- 6. GİRİŞ ---
-prompt = st.chat_input("Riyazi probleminizi daxil edin...", accept_file=True)
+prompt = st.chat_input("Riyazi problemi daxil edin...", accept_file=True)
 
 if prompt:
     user_text = prompt.text if prompt.text else "Zəhmət olmasa bu problemi ən dəqiq şəkildə həll et."
@@ -73,26 +69,24 @@ if prompt:
         if prompt.files:
             for f in prompt.files: st.image(f, width=400)
 
-    # --- 7. ASSİSTANT CAVABI (Məntiq Mərkəzi) ---
+    # --- 7. ASSİSTANT CAVABI (Güncəl Modellər) ---
     with st.chat_message("assistant"):
         placeholder = st.empty()
         full_response = ""
         
         try:
-            # Əgər şəkil varsa, görmə qabiliyyəti olan modeli, yoxdursa dərin düşünən riyaziyyat modelini seçirik
+            # GÜNCƏL MODELLƏR:
             if is_image:
-                target_model = "llama-3.2-90b-vision-preview" # Ən güclü görmə modeli
+                # Şəkil analiz etmək üçün ən güclü aktiv Vision modeli
+                target_model = "llama-3.2-90b-vision-preview"
             else:
-                target_model = "deepseek-r1-distill-llama-70b" # Ən güclü riyaziyyat/məntiq modeli
+                # Riyaziyyatda səhv etməmək üçün ən güclü düşünən beyin
+                target_model = "deepseek-r1-distill-llama-70b" 
             
             system_prompt = (
                 "Sən A-Zəka-san, Abdullah Mikayılov tərəfindən yaradılmış dahi riyaziyyatçısan. "
-                "Sənin əsas məqsədin 100% dəqiqliklə cavab verməkdir. "
-                "QAYDALAR:\n"
-                "1. Riyazi ifadələri mütləq LaTeX formatında yaz ($...$ və ya $$...$$).\n"
-                "2. Həlli dərhal vermə. Əvvəlcə daxildə addımları hesabla, sonra addım-addım izah et.\n"
-                "3. Səhv etməkdən qaçın, hər bir kəsri və kökü dəfələrlə yoxla.\n"
-                "4. Abdullah sənə dahi beyni quraşdırıb, bu beynin gücünü göstər."
+                "Bütün riyazi ifadələri mütləq LaTeX formatında ($...$ və ya $$...$$) yaz.\n"
+                "Həlli dərhal vermə, əvvəlcə dərindən düşün və addım-addım professional izah et."
             )
             
             completion = client.chat.completions.create(
@@ -110,4 +104,19 @@ if prompt:
             st.session_state.messages.append({"role": "assistant", "content": full_response})
             
         except Exception as e:
-            st.error(f"Sistem xətası: {e}")
+            # Əgər yenə model xətası çıxarsa, ehtiyat modelə keçid
+            st.warning("Model yenilənir, ehtiyat beyinə keçid edilir...")
+            try:
+                completion = client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    messages=[{"role": "system", "content": "Riyaziyyatı dəqiq həll et."}] + st.session_state.messages,
+                    stream=True
+                )
+                for chunk in completion:
+                    if chunk.choices[0].delta.content:
+                        full_response += chunk.choices[0].delta.content
+                        placeholder.markdown(full_response + "▌")
+                placeholder.markdown(full_response)
+                st.session_state.messages.append({"role": "assistant", "content": full_response})
+            except:
+                st.error(f"Sistem xətası: {e}")
