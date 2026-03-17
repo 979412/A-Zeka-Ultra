@@ -13,7 +13,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- 3. BEYİN MƏRKƏZİ ---
-# Sənin işlək API açarın (boşluqlar təmizləndi)
 api_key = "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"
 client = Groq(api_key=api_key)
 
@@ -74,10 +73,13 @@ if prompt:
         full_response = ""
         
         try:
-            # Ən yeni və işlək vision modeli
+            # DÜZƏLİŞ: Groq-un hal-hazırda aktiv olan ən stabil modeli
+            # Əgər bu da xəta versə, model adını "llama-3.2-11b-vision-preview" ilə əvəz et
+            target_model = "llama-3.2-11b-vision-preview" 
+            
             completion = client.chat.completions.create(
-                model="llama-3.2-90b-vision-preview",
-                messages=[{"role": "system", "content": "Sən A-Zəka-san, dahi Abdullah Mikayılov tərəfindən yaradılmısan."}] + st.session_state.messages,
+                model=target_model,
+                messages=[{"role": "system", "content": "Sən A-Zəka-san, Abdullah Mikayılov tərəfindən yaradılmısan. Sən bir dahisən."}] + st.session_state.messages,
                 stream=True
             )
             
@@ -90,4 +92,4 @@ if prompt:
             st.session_state.messages.append({"role": "assistant", "content": full_response})
             
         except Exception as e:
-            st.error(f"Xəta baş verdi: {e}")
+            st.error(f"Xəta: {e}")
