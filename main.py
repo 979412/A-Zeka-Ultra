@@ -5,27 +5,16 @@ import base64
 # --- 1. SƏHİFƏ AYARLARI ---
 st.set_page_config(page_title="A-Zəka Ultra Alim", page_icon="🧠", layout="centered")
 
-# --- 2. PEŞƏKAR DİZAYN ---
+# --- 2. DİZAYN (CSS) ---
 st.markdown("""
 <style>
     .stApp { background-color: #ffffff; }
-    .stChatMessage {
-        border-radius: 15px;
-        padding: 15px;
-        margin-bottom: 10px;
-        border: 1px solid #f0f2f6;
-    }
-    .main-title {
-        color: #1E1E1E;
-        text-align: center;
-        font-weight: 800;
-        margin-top: -50px;
-    }
+    .stChatMessage { border-radius: 15px; padding: 15px; margin-bottom: 10px; border: 1px solid #f0f2f6; }
+    .main-title { color: #1E1E1E; text-align: center; font-weight: 800; margin-top: -50px; }
 </style>
 """, unsafe_allow_html=True)
 
 # --- 3. BEYİN MƏRKƏZİ ---
-# Abdullah, sənin aktiv API açarın
 api_key = "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"
 client = Groq(api_key=api_key)
 
@@ -45,7 +34,7 @@ with st.sidebar:
 
 # --- 5. ƏSAS EKRAN ---
 st.markdown("<h1 class='main-title'>🧠 A-Zəka Ultra Alim</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: gray;'>Stabil Model Aktiv edildi</p>", unsafe_allow_html=True)
+st.markdown("---")
 
 # Tarixçəni göstər
 for msg in st.session_state.messages:
@@ -61,17 +50,14 @@ for msg in st.session_state.messages:
 prompt = st.chat_input("Sualını yaz və ya şəkil at...", accept_file=True)
 
 if prompt:
-    user_text = prompt.text if prompt.text else "Bu şəkli analiz et."
+    user_text = prompt.text if prompt.text else "Sualıma cavab ver."
     content_list = [{"type": "text", "text": user_text}]
     
     if prompt.files:
         for f in prompt.files:
             if f.type in ["image/png", "image/jpeg", "image/jpg"]:
                 b64 = encode_image(f)
-                content_list.append({
-                    "type": "image_url",
-                    "image_url": {"url": f"data:{f.type};base64,{b64}"}
-                })
+                content_list.append({"type": "image_url", "image_url": {"url": f"data:{f.type};base64,{b64}"}})
 
     st.session_state.messages.append({"role": "user", "content": content_list})
     
@@ -86,9 +72,8 @@ if prompt:
         full_response = ""
         
         try:
-            # DÜZƏLİŞ: İpucuna əsasən ən stabil vision modelini seçirik
-            # Əgər bu da xəta versə, dırnaq içini "llama-3.2-11b-vision-preview" ilə əvəz et
-            target_model = "llama-3.2-11b-vision-preview" 
+            # DÜZƏLİŞ: Groq-un hazırda ən stabil vision modeli
+            target_model = "llama-3.2-11b-vision-pixtral" 
             
             completion = client.chat.completions.create(
                 model=target_model,
@@ -105,5 +90,5 @@ if prompt:
             st.session_state.messages.append({"role": "assistant", "content": full_response})
             
         except Exception as e:
-            # Əgər yenə model xətası çıxsa, avtomatik alternativə keçid cəhdi üçün xətanı göstər
+            # Əgər Pixtral da xəta versə, deməli yalnız mətn modelinə keçməliyik
             st.error(f"Xəta: {e}")
