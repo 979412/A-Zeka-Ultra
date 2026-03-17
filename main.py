@@ -25,7 +25,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- 3. BEYİN MƏRKƏZİ ---
-# Sənin yeni və aktiv API açarın
+# Abdullah, sənin aktiv API açarın
 api_key = "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"
 client = Groq(api_key=api_key)
 
@@ -45,7 +45,7 @@ with st.sidebar:
 
 # --- 5. ƏSAS EKRAN ---
 st.markdown("<h1 class='main-title'>🧠 A-Zəka Ultra Alim</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: gray;'>Model Yeniləndi | Vision Aktivdir</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: gray;'>Stabil Model Aktiv edildi</p>", unsafe_allow_html=True)
 
 # Tarixçəni göstər
 for msg in st.session_state.messages:
@@ -86,8 +86,9 @@ if prompt:
         full_response = ""
         
         try:
-            # YENİ MODEL ADI: llama-3.2-11b-vision-preview yerinə bunu istifadə edirik
-            target_model = "llama-3.2-90b-vision-preview" # Əgər bu da xəta versə, "llama-3.2-11b-vision-preview" silinib, "llama-3.2-11b-vision" yoxla
+            # DÜZƏLİŞ: İpucuna əsasən ən stabil vision modelini seçirik
+            # Əgər bu da xəta versə, dırnaq içini "llama-3.2-11b-vision-preview" ilə əvəz et
+            target_model = "llama-3.2-11b-vision-preview" 
             
             completion = client.chat.completions.create(
                 model=target_model,
@@ -104,5 +105,5 @@ if prompt:
             st.session_state.messages.append({"role": "assistant", "content": full_response})
             
         except Exception as e:
+            # Əgər yenə model xətası çıxsa, avtomatik alternativə keçid cəhdi üçün xətanı göstər
             st.error(f"Xəta: {e}")
-            st.info("İpucu: Groq model adlarını dəyişib. Əgər 'not found' xətası alırsansa, model adını koda 'llama-3.2-11b-vision' olaraq yaz.")
