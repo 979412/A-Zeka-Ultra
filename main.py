@@ -1,86 +1,112 @@
 import streamlit as st
 from groq import Groq
-import base64
+import requests
+from streamlit_lottie import st_lottie
 
-# --- 1. SƏHİFƏ AYARLARI (Geniş və Rahat) ---
-st.set_page_config(page_title="A-Zəka Ultra Alim", page_icon="🧠", layout="wide")
+# --- 1. SƏHİFƏ AYARLARI ---
+st.set_page_config(page_title="A-Zəka Ultra Alim", page_icon="🧠", layout="centered")
 
-# --- 2. DİZAYN (Gecə Rejiminə Uyğun Modern Stil) ---
+# --- 2. PREMIUM CSS DİZAYNI ---
 st.markdown("""
-<style>
-    .stApp { background-color: #0e1117; color: white; }
-    .stChatMessage { border-radius: 20px; padding: 15px; border: 1px solid #1f2937; margin: 10px 0; }
-    .stChatInput { border-radius: 10px !0px; }
-</style>
-""", unsafe_allow_html=True)
+    <style>
+    /* Ümumi Arxa Fon */
+    .stApp {
+        background: radial-gradient(circle, #1b2735 0%, #090a0f 100%);
+    }
+    
+    /* Neon Başlıq Effekti */
+    .neon-text {
+        color: #fff;
+        text-shadow: 0 0 10px #00d4ff, 0 0 20px #00d4ff, 0 0 40px #00d4ff;
+        font-family: 'Orbitron', sans-serif;
+        text-align: center;
+    }
 
-# --- 3. BEYİN MƏRKƏZİ (Sənin Yeni Açarın) ---
-# Diqqət: Boşluq qalmaması üçün açarı tam bura yerləşdirdik
-api_key = "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"
+    /* Mesaj Balonlarını Gözəlləşdir */
+    .stChatMessage {
+        border-radius: 20px;
+        margin-bottom: 15px;
+        border: 1px solid rgba(0, 212, 255, 0.2);
+        backdrop-filter: blur(5px);
+    }
+    
+    /* Sol Panel Səliqəsi */
+    [data-testid="stSidebar"] {
+        background-color: rgba(15, 15, 25, 0.9);
+        border-right: 1px solid #00d4ff;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-thumb { background: #00d4ff; border-radius: 10px; }
+    </style>
+    """, unsafe_allow_html=True)
+
+# --- 3. ANIMASİYA YÜKLƏMƏ (Lottie) ---
+def load_lottie(url):
+    r = requests.get(url)
+    if r.status_code != 200: return None
+    return r.json()
+
+lottie_ai = load_lottie("https://assets10.lottiefiles.com/packages/lf20_5njp3v8p.json")
+
+# --- 4. BEYİN MƏRKƏZİ (Groq) ---
+try:
+    api_key = st.secrets["GROQ_API_KEY"]
+except:
+    api_key = "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"
+
 client = Groq(api_key=api_key)
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-def encode_image(uploaded_file):
-    return base64.b64encode(uploaded_file.getvalue()).decode('utf-8')
-
-# --- 4. SOL PANEL ---
+# --- 5. SOL PANEL ---
 with st.sidebar:
-    st.title("🧠 A-Zəka Pro")
-    st.info("Müəllif: Abdullah Mikayılov")
+    if lottie_ai:
+        st_lottie(lottie_ai, height=150)
+    st.markdown("<h2 style='text-align: center; color: #00d4ff;'>A-Zəka Control</h2>", unsafe_allow_html=True)
+    st.markdown("---")
     if st.button("🗑️ Tarixçəni Təmizlə", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
+    st.write("---")
+    st.write("🚀 Versiya: **2.0 Ultra**")
+    st.write("👤 Yaradıcı: **Abdullah Mikayılov**")
 
-# --- 5. ƏSAS EKRAN ---
-st.title("🚀 A-Zəka Ultra Alim (Vision Mode)")
-st.write("Sualını soruş və ya şəkildəki misalı bura at!")
+# --- 6. ƏSAS EKRAN ---
+st.markdown("<h1 class='neon-text'>🧠 A-Zəka Ultra Alim</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #aaa;'>Abdullah Mikayılov tərəfindən yaradılan dünyanın ən zəkalı köməkçisi</p>", unsafe_allow_html=True)
+st.markdown("---")
 
-# Tarixçəni göstər
+# Mesajları göstər
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
-        if isinstance(msg["content"], list):
-            for part in msg["content"]:
-                if part["type"] == "text": st.markdown(part["text"])
-                elif part["type"] == "image_url": st.image(part["image_url"]["url"], width=400)
-        else:
-            st.markdown(msg["content"])
+        st.markdown(msg["content"])
 
-# --- 6. GİRİŞ VƏ FAYL ANALİZİ ---
+# --- 7. GİRİŞ SAHƏSİ (Gemini Style) ---
 prompt = st.chat_input("Dahi alimə sualını ver...", accept_file=True)
 
 if prompt:
-    user_text = prompt.text if prompt.text else "Bu şəkildəki misalları həll et."
-    content_list = [{"type": "text", "text": user_text}]
+    user_text = prompt.text if prompt.text else ""
+    display_content = user_text
     
-    # Şəkil yüklənibsə onu bota "göstəririk"
     if prompt.files:
         for f in prompt.files:
-            if f.type in ["image/png", "image/jpeg", "image/jpg"]:
-                b64 = encode_image(f)
-                content_list.append({
-                    "type": "image_url", 
-                    "image_url": {"url": f"data:{f.type};base64,{b64}"}
-                })
+            display_content = f"📎 **Fayl:** {f.name}\n\n" + display_content
 
-    st.session_state.messages.append({"role": "user", "content": content_list})
-    
+    st.session_state.messages.append({"role": "user", "content": display_content})
     with st.chat_message("user"):
-        st.markdown(user_text)
-        if prompt.files:
-            for f in prompt.files: st.image(f, width=400)
+        st.markdown(display_content)
 
-    # --- 7. ASSİSTANT CAVABI (Maksimum Sürət) ---
     with st.chat_message("assistant"):
         placeholder = st.empty()
         full_response = ""
         
         try:
-            # Ən etibarlı vision modeli: llama-3.2-11b-vision-preview
             completion = client.chat.completions.create(
-                model="llama-3.2-11b-vision-preview",
-                messages=[{"role": "system", "content": "Sən A-Zəka-san. Şəkilləri mükəmməl analiz edirsən. Abdullah Mikayılov səni ən güclü alim beyni ilə təchiz edib."}] + st.session_state.messages,
+                model="llama-3.3-70b-versatile",
+                messages=[{"role": "system", "content": "Sən A-Zəka-san, dahi Abdullah Mikayılovun sənət əsərisən."}] + st.session_state.messages,
                 stream=True
             )
             
@@ -92,5 +118,5 @@ if prompt:
             placeholder.markdown(full_response)
             st.session_state.messages.append({"role": "assistant", "content": full_response})
             
-        except Exception as e:
-            st.error(f"Xəta kodu: {e}")
+        except:
+            st.error("Bağlantı xətası!")
