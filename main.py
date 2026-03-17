@@ -1,106 +1,80 @@
 import streamlit as st
-from groq import Groq
-import base64
+import google.generativeai as genai
+from PIL import Image
+import io
 
 # --- 1. SƏHİFƏ AYARLARI ---
-st.set_page_config(page_title="A-Zəka Ultra Alim", page_icon="🧠", layout="centered")
+st.set_page_config(page_title="A-Zəka Ultra Gemini", page_icon="♊", layout="wide")
 
-# --- 2. PEŞƏKAR DİZAYN (CSS) ---
+# --- 2. GÖZƏL DİZAYN ---
 st.markdown("""
 <style>
-    .stApp { background-color: #ffffff; }
-    .stChatMessage { border-radius: 15px; padding: 15px; margin-bottom: 10px; border: 1px solid #f0f2f6; }
-    .main-title { color: #1E1E1E; text-align: center; font-weight: 800; margin-top: -50px; }
-    .sidebar-text { font-size: 0.9rem; color: #555; }
+    .stApp { background-color: #f0f2f6; }
+    .main-title { color: #1a73e8; text-align: center; font-weight: 900; font-size: 3rem; }
+    .stChatMessage { border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. BEYİN MƏRKƏZİ (Groq) ---
-# Sənin aktiv API açarın
-api_key = "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"
-client = Groq(api_key=api_key)
+# --- 3. GEMİNİ BEYİN MƏRKƏZİ ---
+# Bura öz Google AI Studio API key-ini yazmalısan
+GEMINI_API_KEY = "BURAYA_OZ_API_KEY_INI_YAZ" 
+genai.configure(api_key=GEMINI_API_KEY)
 
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+# Modeli başladırıq (Flash 1.5 - Sürətli və Ağıllı)
+model = genai.GenerativeModel('gemini-1.5-flash')
 
-# Şəkli kodlaşdırmaq üçün funksiya
-def encode_image(uploaded_file):
-    return base64.b64encode(uploaded_file.getvalue()).decode('utf-8')
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
 
-# --- 4. SOL PANEL (Ayarlar) ---
+# --- 4. SOL PANEL ---
 with st.sidebar:
-    st.markdown("<h2 style='text-align: center;'>⚙️ Ayarlar</h2>", unsafe_allow_html=True)
-    st.markdown("<p class='sidebar-text'>Yaradıcı: <b>Abdullah Mikayılov</b></p>", unsafe_allow_html=True)
-    st.markdown("<p class='sidebar-text'>Rejim: <b>Ultra Alim (Görmə Aktiv)</b></p>", unsafe_allow_html=True)
-    
-    if st.button("🗑️ Tarixçəni Sıfırla", use_container_width=True):
-        st.session_state.messages = []
+    st.image("https://www.gstatic.com/lamda/images/gemini_sparkle_v002_d4735304fb62aa2586aed.svg", width=100)
+    st.title("A-Zəka Control")
+    st.info("Beyin: **Gemini 1.5 Flash** Active")
+    if st.button("🗑️ Tarixçəni Təmizlə", use_container_width=True):
+        st.session_state.chat_history = []
         st.rerun()
+    st.write("Yaradıcı: **Abdullah Mikayılov**")
 
 # --- 5. ƏSAS EKRAN ---
-st.markdown("<h1 class='main-title'>🧠 A-Zəka Ultra Alim</h1>", unsafe_allow_html=True)
-st.markdown("---")
+st.markdown("<h1 class='main-title'>🧠 A-Zəka Ultra Gemini</h1>", unsafe_allow_html=True)
 
-# Mesaj tarixçəsini göstər
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        if isinstance(msg["content"], list):
-            for part in msg["content"]:
-                if part["type"] == "text": st.markdown(part["text"])
-                elif part["type"] == "image_url": st.image(part["image_url"]["url"], width=300)
-        else:
-            st.markdown(msg["content"])
+# Tarixçəni göstər
+for message in st.session_state.chat_history:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
-# --- 6. GİRİŞ (Mətn və Şəkil) ---
-prompt = st.chat_input("Dahi səviyyəli sualını daxil et və ya şəkil at...", accept_file=True)
+# --- 6. GİRİŞ VƏ ANALİZ ---
+prompt = st.chat_input("Sualını yaz və ya şəkil at...", accept_file=True)
 
 if prompt:
-    user_text = prompt.text if prompt.text else "Zəhmət olmasa bu vizual materialı analiz et."
-    content_list = [{"type": "text", "text": user_text}]
-    
-    if prompt.files:
-        for f in prompt.files:
-            if f.type in ["image/png", "image/jpeg", "image/jpg"]:
-                b64 = encode_image(f)
-                content_list.append({
-                    "type": "image_url",
-                    "image_url": {"url": f"data:{f.type};base64,{b64}"}
-                })
-
-    # İstifadəçi mesajını tarixçəyə əlavə et
-    st.session_state.messages.append({"role": "user", "content": content_list})
-    
-    # Ekranda göstər
+    # İstifadəçi mesajını göstər
     with st.chat_message("user"):
-        st.markdown(user_text)
-        if prompt.files:
-            for f in prompt.files: st.image(f, width=300)
-
-    # --- 7. ASSİSTANT CAVABI (Stabil Model) ---
-    with st.chat_message("assistant"):
-        placeholder = st.empty()
-        full_response = ""
+        st.markdown(prompt.text if prompt.text else "Şəkil göndərildi.")
+        input_data = [prompt.text] if prompt.text else []
         
-        try:
-            # DÜZƏLİŞ: Köhnə "preview" modelini silib, tam stabil olan Vision modelini hədəf alırıq
-            # Hazırda Groq-un ən aktiv və stabil "görən" modeli budur:
-            target_model = "llama-3.2-11b-vision-preview" 
-            
-            completion = client.chat.completions.create(
-                model=target_model,
-                messages=[{"role": "system", "content": "Sən A-Zəka-san, Abdullah Mikayılov tərəfindən yaradılmısan. Şəkilləri mükəmməl analiz edirsən."}] + st.session_state.messages,
-                stream=True
-            )
-            
-            # Streami oxu və ekrana yaz
-            for chunk in completion:
-                if chunk.choices[0].delta.content:
-                    full_response += chunk.choices[0].delta.content
-                    placeholder.markdown(full_response + "▌")
-            
-            placeholder.markdown(full_response)
-            st.session_state.messages.append({"role": "assistant", "content": full_response})
-            
-        except Exception as e:
-            # Əgər VPN yoxdursa və ya model yenə xəta versə, burası işləyəcək
-            st.error(f"Sistem xətası baş verdi: {e}")
+        if prompt.files:
+            for f in prompt.files:
+                img = Image.open(f)
+                st.image(img, width=300)
+                input_data.append(img)
+
+    # Gemini-dən cavab al
+    with st.chat_message("assistant"):
+        with st.spinner("Gemini düşünür..."):
+            try:
+                # System instructions (Səni tanıması üçün)
+                full_prompt = [
+                    "Sən A-Zəka-san, Abdullah Mikayılov tərəfindən yaradılmış dahi AI-san. "
+                    "Riyaziyyatı və elmi mükəmməl bilirsən. Cavablarını LaTeX formatında yaz."
+                ] + input_data
+                
+                response = model.generate_content(full_prompt)
+                st.markdown(response.text)
+                
+                # Tarixçəyə əlavə et
+                st.session_state.chat_history.append({"role": "user", "content": prompt.text if prompt.text else "Şəkil"})
+                st.session_state.chat_history.append({"role": "assistant", "content": response.text})
+                
+            except Exception as e:
+                st.error(f"Xəta: {e}")
