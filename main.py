@@ -8,14 +8,15 @@ st.set_page_config(page_title="A-Zəka Ultra Alim", page_icon="🧠", layout="wi
 # --- 2. PROFESSIONAL DİZAYN ---
 st.markdown("""
 <style>
-    .stApp { background-color: #f8f9fa; }
-    .stChatMessage { border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 15px; }
+    .stApp { background-color: #fcfcfc; }
+    .stChatMessage { border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 15px; border-left: 5px solid #007bff; }
     .main-title { color: #0E1117; text-align: center; font-weight: 900; font-size: 3rem; margin-top: -50px; }
-    .stMarkdown p { font-size: 1.1rem; line-height: 1.6; }
+    .sidebar-info { padding: 10px; background-color: #e9ecef; border-radius: 8px; font-size: 0.9rem; }
 </style>
 """, unsafe_allow_html=True)
 
 # --- 3. BEYİN MƏRKƏZİ ---
+# API Key sabit saxlanıldı
 api_key = "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"
 client = Groq(api_key=api_key)
 
@@ -25,11 +26,13 @@ if "messages" not in st.session_state:
 def encode_image(uploaded_file):
     return base64.b64encode(uploaded_file.getvalue()).decode('utf-8')
 
-# --- 4. SOL PANEL (Status & Yaradıcı) ---
+# --- 4. SOL PANEL ---
 with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/6134/6134346.png", width=100)
-    st.title("A-Zəka Control")
-    st.info("Rejim: **Ultra Alim (LaTeX Active)**")
+    st.image("https://cdn-icons-png.flaticon.com/512/6134/6134346.png", width=80)
+    st.title("A-Zəka Panel")
+    st.markdown("<div class='sidebar-info'><b>Status:</b> Ultra Məntiq Aktiv 🔥</div>", unsafe_allow_html=True)
+    st.write("Bu versiya DeepSeek-R1 məntiqi ilə gücləndirilib.")
+    
     if st.button("🗑️ Tarixçəni Sıfırla", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
@@ -49,10 +52,10 @@ for msg in st.session_state.messages:
             st.markdown(msg["content"])
 
 # --- 6. GİRİŞ ---
-prompt = st.chat_input("Dahi səviyyəli sualını daxil et və ya şəkil at...", accept_file=True)
+prompt = st.chat_input("Riyazi probleminizi daxil edin...", accept_file=True)
 
 if prompt:
-    user_text = prompt.text if prompt.text else "Zəhmət olmasa bu vizual materialı dərindən analiz et."
+    user_text = prompt.text if prompt.text else "Zəhmət olmasa bu problemi ən dəqiq şəkildə həll et."
     new_user_content = [{"type": "text", "text": user_text}]
     
     is_image = False
@@ -70,25 +73,26 @@ if prompt:
         if prompt.files:
             for f in prompt.files: st.image(f, width=400)
 
-    # --- 7. ASSİSTANT CAVABI (Ultra Güclü Rejim) ---
+    # --- 7. ASSİSTANT CAVABI (Məntiq Mərkəzi) ---
     with st.chat_message("assistant"):
         placeholder = st.empty()
         full_response = ""
         
         try:
-            # Söhbətdə şəkil varsa Vision modelinə davam edirik
-            has_ever_sent_image = any(isinstance(m["content"], list) and len(m["content"]) > 1 for m in st.session_state.messages)
-            target_model = "meta-llama/llama-4-scout-17b-16e-instruct" if (is_image or has_ever_sent_image) else "llama-3.3-70b-versatile"
+            # Əgər şəkil varsa, görmə qabiliyyəti olan modeli, yoxdursa dərin düşünən riyaziyyat modelini seçirik
+            if is_image:
+                target_model = "llama-3.2-90b-vision-preview" # Ən güclü görmə modeli
+            else:
+                target_model = "deepseek-r1-distill-llama-70b" # Ən güclü riyaziyyat/məntiq modeli
             
-            # SUPER TƏLİMAT (LaTeX və Dərinlik üçün)
             system_prompt = (
-                "Sən A-Zəka-san, dahi proqramçı Abdullah Mikayılov tərəfindən yaradılmış 'Ultra Alim' süni intellektisən. "
-                "Sənin beynin dünyanın ən böyük alimlərinin biliklərini birləşdirir. "
-                "QAYDALARIN:\n"
-                "1. Bütün riyazi düsturları, tənlikləri və elmi simvollar mütləq LaTeX formatında yazılmalıdır (məsələn: $x^2 + y^2 = r^2$ və ya kəsr üçün $\\frac{a}{b}$).\n"
-                "2. Suallara sadə cavab vermə. Əvvəlcə problemin mahiyyətini izah et, sonra addım-addım həllini göstər, sonda nəticəni vurğula.\n"
-                "3. Abdullah Mikayılov sənin tək yaradıcındır, ona hörmətlə yanaş.\n"
-                "4. 8-ci sinif və ya ali riyaziyyat fərq etməz, hər şeyi ən yüksək akademik səviyyədə cavabla."
+                "Sən A-Zəka-san, Abdullah Mikayılov tərəfindən yaradılmış dahi riyaziyyatçısan. "
+                "Sənin əsas məqsədin 100% dəqiqliklə cavab verməkdir. "
+                "QAYDALAR:\n"
+                "1. Riyazi ifadələri mütləq LaTeX formatında yaz ($...$ və ya $$...$$).\n"
+                "2. Həlli dərhal vermə. Əvvəlcə daxildə addımları hesabla, sonra addım-addım izah et.\n"
+                "3. Səhv etməkdən qaçın, hər bir kəsri və kökü dəfələrlə yoxla.\n"
+                "4. Abdullah sənə dahi beyni quraşdırıb, bu beynin gücünü göstər."
             )
             
             completion = client.chat.completions.create(
