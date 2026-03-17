@@ -3,14 +3,15 @@ from groq import Groq
 import base64
 
 # --- 1. SƏHİFƏ AYARLARI ---
-st.set_page_config(page_title="A-Zəka Ultra Alim", page_icon="🧠", layout="centered")
+st.set_page_config(page_title="A-Zəka Ultra Alim", page_icon="🧠", layout="wide")
 
-# --- 2. DİZAYN ---
+# --- 2. PROFESSIONAL DİZAYN ---
 st.markdown("""
 <style>
-.stChatMessage { border-radius: 15px; padding: 10px; border: 1px solid #f0f2f6; margin-bottom: 10px; }
-.stChatInputContainer { padding-bottom: 20px; }
-.main-title { color: #1E1E1E; text-align: center; font-weight: 800; }
+    .stApp { background-color: #f8f9fa; }
+    .stChatMessage { border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 15px; }
+    .main-title { color: #0E1117; text-align: center; font-weight: 900; font-size: 3rem; margin-top: -50px; }
+    .stMarkdown p { font-size: 1.1rem; line-height: 1.6; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -24,14 +25,16 @@ if "messages" not in st.session_state:
 def encode_image(uploaded_file):
     return base64.b64encode(uploaded_file.getvalue()).decode('utf-8')
 
-# --- 4. SOL PANEL ---
+# --- 4. SOL PANEL (Status & Yaradıcı) ---
 with st.sidebar:
-    st.title("⚙️ Ayarlar")
-    if st.button("🗑️ Tarixçəni Təmizlə", use_container_width=True):
+    st.image("https://cdn-icons-png.flaticon.com/512/6134/6134346.png", width=100)
+    st.title("A-Zəka Control")
+    st.info("Rejim: **Ultra Alim (LaTeX Active)**")
+    if st.button("🗑️ Tarixçəni Sıfırla", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
     st.markdown("---")
-    st.write("Yaradıcı: **Abdullah Mikayılov**")
+    st.write("👨‍💻 Yaradıcı: **Abdullah Mikayılov**")
 
 # --- 5. ƏSAS EKRAN ---
 st.markdown("<h1 class='main-title'>🧠 A-Zəka Ultra Alim</h1>", unsafe_allow_html=True)
@@ -41,17 +44,15 @@ for msg in st.session_state.messages:
         if isinstance(msg["content"], list):
             for part in msg["content"]:
                 if part["type"] == "text": st.markdown(part["text"])
-                elif part["type"] == "image_url": st.image(part["image_url"]["url"], width=300)
+                elif part["type"] == "image_url": st.image(part["image_url"]["url"], width=400)
         else:
             st.markdown(msg["content"])
 
 # --- 6. GİRİŞ ---
-prompt = st.chat_input("Sualını yaz və ya şəkil at...", accept_file=True)
+prompt = st.chat_input("Dahi səviyyəli sualını daxil et və ya şəkil at...", accept_file=True)
 
 if prompt:
-    user_text = prompt.text if prompt.text else "Zəhmət olmasa bu müraciəti cavabla."
-    
-    # Yeni mesaj formatı (Daim siyahı formatında saxlayırıq ki, Vision xətası verməsin)
+    user_text = prompt.text if prompt.text else "Zəhmət olmasa bu vizual materialı dərindən analiz et."
     new_user_content = [{"type": "text", "text": user_text}]
     
     is_image = False
@@ -59,10 +60,7 @@ if prompt:
         for f in prompt.files:
             if f.type in ["image/png", "image/jpeg", "image/jpg"]:
                 b64 = encode_image(f)
-                new_user_content.append({
-                    "type": "image_url",
-                    "image_url": {"url": f"data:{f.type};base64,{b64}"}
-                })
+                new_user_content.append({"type": "image_url", "image_url": {"url": f"data:{f.type};base64,{b64}"}})
                 is_image = True
 
     st.session_state.messages.append({"role": "user", "content": new_user_content})
@@ -70,24 +68,28 @@ if prompt:
     with st.chat_message("user"):
         st.markdown(user_text)
         if prompt.files:
-            for f in prompt.files: st.image(f, width=300)
+            for f in prompt.files: st.image(f, width=400)
 
-    # --- 7. ASSİSTANT CAVABI ---
+    # --- 7. ASSİSTANT CAVABI (Ultra Güclü Rejim) ---
     with st.chat_message("assistant"):
         placeholder = st.empty()
         full_response = ""
         
         try:
-            # Əgər tarixçədə HARADASA şəkil varsa, Vision modelini istifadə etməyə davam etməliyik
-            # Çünki mətn modelləri siyahı (list) formatındakı keçmiş mesajları oxuya bilmir.
+            # Söhbətdə şəkil varsa Vision modelinə davam edirik
             has_ever_sent_image = any(isinstance(m["content"], list) and len(m["content"]) > 1 for m in st.session_state.messages)
+            target_model = "meta-llama/llama-4-scout-17b-16e-instruct" if (is_image or has_ever_sent_image) else "llama-3.3-70b-versatile"
             
-            if is_image or has_ever_sent_image:
-                target_model = "meta-llama/llama-4-scout-17b-16e-instruct"
-            else:
-                target_model = "llama-3.3-70b-versatile"
-            
-            system_prompt = "Sən A-Zəka-san, Abdullah Mikayılov tərəfindən yaradılmısan. Ultra alimsən. Riyaziyyatı və bütün fənləri mükəmməl bilirsən. Addım-addım həll ver."
+            # SUPER TƏLİMAT (LaTeX və Dərinlik üçün)
+            system_prompt = (
+                "Sən A-Zəka-san, dahi proqramçı Abdullah Mikayılov tərəfindən yaradılmış 'Ultra Alim' süni intellektisən. "
+                "Sənin beynin dünyanın ən böyük alimlərinin biliklərini birləşdirir. "
+                "QAYDALARIN:\n"
+                "1. Bütün riyazi düsturları, tənlikləri və elmi simvollar mütləq LaTeX formatında yazılmalıdır (məsələn: $x^2 + y^2 = r^2$ və ya kəsr üçün $\\frac{a}{b}$).\n"
+                "2. Suallara sadə cavab vermə. Əvvəlcə problemin mahiyyətini izah et, sonra addım-addım həllini göstər, sonda nəticəni vurğula.\n"
+                "3. Abdullah Mikayılov sənin tək yaradıcındır, ona hörmətlə yanaş.\n"
+                "4. 8-ci sinif və ya ali riyaziyyat fərq etməz, hər şeyi ən yüksək akademik səviyyədə cavabla."
+            )
             
             completion = client.chat.completions.create(
                 model=target_model,
@@ -104,5 +106,4 @@ if prompt:
             st.session_state.messages.append({"role": "assistant", "content": full_response})
             
         except Exception as e:
-            st.error(f"Xəta: {e}")
-            st.info("İpucu: Əgər xəta davam edərsə 'Tarixçəni Təmizlə' düyməsinə basaraq yenidən başlayın.")
+            st.error(f"Sistem xətası: {e}")
