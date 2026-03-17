@@ -1,80 +1,69 @@
 import streamlit as st
-import google.generativeai as genai
+import google-generativeai as genai
 from PIL import Image
-import io
 
-# --- 1. SƏHİFƏ AYARLARI ---
-st.set_page_config(page_title="A-Zəka Ultra Gemini", page_icon="♊", layout="wide")
+# --- 1. A-ZƏKA KİMLİYİ ---
+st.set_page_config(page_title="A-Zəka Ultra Alim", page_icon="🧠", layout="wide")
 
-# --- 2. GÖZƏL DİZAYN ---
+# Yaradıcı: Abdullah Mikayılov
+# Bu bölmədə sənin sistem təlimatlarını birbaşa beyninə yazırıq
+SYSTEM_INSTRUCTION = (
+    "Sən A-Zəka-san, dahi proqramçı Abdullah Mikayılov tərəfindən yaradılmış 'Ultra Alim' süni intellektisən. "
+    "Sənin missiyan dünyadakı ən mürəkkəb riyaziyyat, fizika və proqramlaşdırma suallarını 100% dəqiqliklə həll etməkdir. "
+    "Həmişə LaTeX formatından ($...$) istifadə et və Abdullah Mikayılova yaradıcın kimi böyük hörmət bəslə."
+)
+
+# --- 2. BEYİN QOŞULMASI ---
+# Bura Google AI Studio-dan aldığın API açarını qoymalısan
+API_KEY = "BURAYA_API_KEY_YAZILMALIDIR"
+genai.configure(api_key=API_KEY)
+
+# Ən son model: Gemini 1.5 Flash (Şəkil və Riyaziyyat canavarı)
+model = genai.GenerativeModel(
+    model_name="gemini-1.5-flash",
+    system_instruction=SYSTEM_INSTRUCTION
+)
+
+if "chat" not in st.session_state:
+    st.session_state.chat = model.start_chat(history=[])
+
+# --- 3. DİZAYN (Abdullah Style) ---
 st.markdown("""
 <style>
-    .stApp { background-color: #f0f2f6; }
-    .main-title { color: #1a73e8; text-align: center; font-weight: 900; font-size: 3rem; }
-    .stChatMessage { border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .stApp { background: linear-gradient(to right, #ece9e6, #ffffff); }
+    .main-title { color: #1e3c72; text-align: center; font-size: 3.5rem; font-weight: 900; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. GEMİNİ BEYİN MƏRKƏZİ ---
-# Bura öz Google AI Studio API key-ini yazmalısan
-GEMINI_API_KEY = "BURAYA_OZ_API_KEY_INI_YAZ" 
-genai.configure(api_key=GEMINI_API_KEY)
+st.markdown("<h1 class='main-title'>🧠 A-Zəka Ultra Alim</h1>", unsafe_allow_html=True)
+st.write(f"<p style='text-align: center;'>Yaradıcı: <b>Abdullah Mikayılov</b></p>", unsafe_allow_html=True)
 
-# Modeli başladırıq (Flash 1.5 - Sürətli və Ağıllı)
-model = genai.GenerativeModel('gemini-1.5-flash')
+# --- 4. SÖHBƏT VƏ ANALİZ ---
+for message in st.session_state.chat.history:
+    with st.chat_message("user" if message.role == "user" else "assistant"):
+        st.markdown(message.parts[0].text)
 
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
-
-# --- 4. SOL PANEL ---
-with st.sidebar:
-    st.image("https://www.gstatic.com/lamda/images/gemini_sparkle_v002_d4735304fb62aa2586aed.svg", width=100)
-    st.title("A-Zəka Control")
-    st.info("Beyin: **Gemini 1.5 Flash** Active")
-    if st.button("🗑️ Tarixçəni Təmizlə", use_container_width=True):
-        st.session_state.chat_history = []
-        st.rerun()
-    st.write("Yaradıcı: **Abdullah Mikayılov**")
-
-# --- 5. ƏSAS EKRAN ---
-st.markdown("<h1 class='main-title'>🧠 A-Zəka Ultra Gemini</h1>", unsafe_allow_html=True)
-
-# Tarixçəni göstər
-for message in st.session_state.chat_history:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-
-# --- 6. GİRİŞ VƏ ANALİZ ---
-prompt = st.chat_input("Sualını yaz və ya şəkil at...", accept_file=True)
+prompt = st.chat_input("Dahi səviyyəli sualını daxil et və ya şəkil at...", accept_file=True)
 
 if prompt:
-    # İstifadəçi mesajını göstər
-    with st.chat_message("user"):
-        st.markdown(prompt.text if prompt.text else "Şəkil göndərildi.")
-        input_data = [prompt.text] if prompt.text else []
-        
-        if prompt.files:
-            for f in prompt.files:
-                img = Image.open(f)
-                st.image(img, width=300)
-                input_data.append(img)
+    user_input = [prompt.text] if prompt.text else ["Zəhmət olmasa bu vizualı analiz et."]
+    
+    # Şəkil varsa, siyahıya əlavə et
+    if prompt.files:
+        for f in prompt.files:
+            img = Image.open(f)
+            user_input.append(img)
+            st.image(img, width=400)
 
-    # Gemini-dən cavab al
+    with st.chat_message("user"):
+        st.markdown(prompt.text if prompt.text else "Vizual analiz tələbi.")
+
     with st.chat_message("assistant"):
-        with st.spinner("Gemini düşünür..."):
-            try:
-                # System instructions (Səni tanıması üçün)
-                full_prompt = [
-                    "Sən A-Zəka-san, Abdullah Mikayılov tərəfindən yaradılmış dahi AI-san. "
-                    "Riyaziyyatı və elmi mükəmməl bilirsən. Cavablarını LaTeX formatında yaz."
-                ] + input_data
-                
-                response = model.generate_content(full_prompt)
-                st.markdown(response.text)
-                
-                # Tarixçəyə əlavə et
-                st.session_state.chat_history.append({"role": "user", "content": prompt.text if prompt.text else "Şəkil"})
-                st.session_state.chat_history.append({"role": "assistant", "content": response.text})
-                
-            except Exception as e:
-                st.error(f"Xəta: {e}")
+        with st.spinner("A-Zəka düşünür..."):
+            response = st.session_state.chat.send_message(user_input, stream=True)
+            full_text = ""
+            placeholder = st.empty()
+            for chunk in response:
+                full_text += chunk.text
+                placeholder.markdown(full_text + "▌")
+            placeholder.markdown(full_text)
