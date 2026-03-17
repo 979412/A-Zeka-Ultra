@@ -1,49 +1,51 @@
 import streamlit as st
 from groq import Groq
+import os
 
-# --- 1. SƏHİFƏ AYARLARI ---
+# --- 1. SƏHİFƏ AYARLARI VƏ DİZAYN ---
 st.set_page_config(page_title="A-Zəka Ultra Alim", page_icon="🧠", layout="centered")
 
-# --- 2. GİZLİ API QURULUMU ---
-# Bu hissə proqramı serverə qoyanda açarı 'Secrets' hissəsindən götürəcək
+st.markdown("""
+    <style>
+    .main { background-color: #0e1117; color: white; }
+    .stTextInput>div>div>input { background-color: #262730; color: white; border-radius: 15px; border: 1px solid #4a4d5a; }
+    .stChatMessage { border-radius: 20px; padding: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .stButton>button { border-radius: 10px; background-color: #2e3139; color: white; border: none; }
+    </style>
+    """, unsafe_allow_html=True)
+
+# --- 2. BEYİN MƏRKƏZİ (Groq) ---
+# Secrets-dən açarı götürürük
 try:
-    # Əgər lokalda işlədirsənsə, birbaşa açarı bura yaza bilərsən
-    # Amma server üçün st.secrets istifadə etmək mütləqdir
     api_key = st.secrets["GROQ_API_KEY"]
 except:
-    # Lokalda yoxlamaq üçün öz açarını bura müvəqqəti qoya bilərsən
     api_key = "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"
 
 client = Groq(api_key=api_key)
 
-# --- 3. ULTRA ALİM TƏLİMATI ---
-system_prompt = """
-Sən 'A-Zəka'-san. Səni dahi proqramçı Abdullah Mikayılov yaradıb. 
-Sən bütün dünya üçün çalışan, hər şeyi bilən Ultra Alimsən. 
-Saniyələr içində ən mürəkkəb sualları həlli ilə cavablandırırsan.
-"""
-
-# --- 4. DİZAYN (CSS) ---
-st.markdown("""
-    <style>
-    .main { background-color: #0e1117; color: white; }
-    .stTextInput>div>div>input { background-color: #262730; color: white; border-radius: 12px; }
-    .stChatMessage { border-radius: 15px; }
-    </style>
-    """, unsafe_allow_html=True)
-
-# --- 5. YADDAŞ VƏ SÖHBƏT ---
+# --- 3. YADDAŞ ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# --- 4. SOL PANEL ---
+with st.sidebar:
+    st.title("⚙️ A-Zəka Control")
+    st.markdown("---")
+    if st.button("🗑️ Tarixçəni Təmizlə", use_container_width=True):
+        st.session_state.messages = []
+        st.rerun()
+    st.markdown("---")
+    st.write("Yaradıcı: **Abdullah Mikayılov**")
+
+# --- 5. ƏSAS İNTERFEYS ---
 st.title("🧠 A-Zəka Ultra Alim")
-st.caption(f"Yaradıcı: Abdullah Mikayılov | Model: Llama-3 (Saniyəlik Sürət)")
+st.markdown("---")
 
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# --- 6. İSTİFADƏÇİ GİRİŞİ ---
+# --- 6. SUAL VƏ CAVAB PROSESİ ---
 prompt = st.chat_input("Dahi alimə sualını ver...")
 
 if prompt:
@@ -56,9 +58,12 @@ if prompt:
         full_response = ""
         
         try:
+            # Dünyanın ən mürəkkəb suallarını cavablayan Alim Təlimatı
             completion = client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
-                messages=[{"role": "system", "content": system_prompt}] + st.session_state.messages,
+                messages=[
+                    {"role": "system", "content": "Sən 'A-Zəka'-san. Səni dahi proqramçı Abdullah Mikayılov yaradıb. Sən hər şeyi saniyələr içində bilən Ultra Alimsən. Cavabların professional, dəqiq və həlli ilə olmalıdır."}
+                ] + st.session_state.messages,
                 stream=True
             )
             
@@ -70,5 +75,8 @@ if prompt:
             placeholder.markdown(full_response)
             st.session_state.messages.append({"role": "assistant", "content": full_response})
             
+            # --- YENİ ÖZƏLLİK: SƏSLİ OXUMA (OPSİONAL) ---
+            # İstəsən bura Google-un pulsuz gTTS kitabxanasını əlavə edib cavabı səsləndirə bilərik.
+            
         except Exception as e:
-            st.error("Bağlantı xətası! Zəhmət olmasa VPN-in aktiv olduğunu yoxlayın.")
+            st.error("Bağlantıda kiçik bir problem oldu. Zəhmət olmasa VPN-i və ya açarı yoxlayın.")
