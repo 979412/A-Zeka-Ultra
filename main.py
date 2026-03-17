@@ -5,7 +5,7 @@ import base64
 # --- 1. SƏHİFƏ AYARLARI ---
 st.set_page_config(page_title="A-Zəka Ultra Alim", page_icon="🧠", layout="centered")
 
-# --- 2. DİZAYN (CSS) ---
+# --- 2. DİZAYN ---
 st.markdown("""
 <style>
     .stApp { background-color: #ffffff; }
@@ -26,7 +26,7 @@ def encode_image(uploaded_file):
 
 # --- 4. SOL PANEL ---
 with st.sidebar:
-    st.markdown("<h2 style='text-align: center;'>⚙️ Ayarlar</h2>", unsafe_allow_html=True)
+    st.title("⚙️ Ayarlar")
     st.write("Yaradıcı: **Abdullah Mikayılov**")
     if st.button("🗑️ Tarixçəni Təmizlə", use_container_width=True):
         st.session_state.messages = []
@@ -34,9 +34,8 @@ with st.sidebar:
 
 # --- 5. ƏSAS EKRAN ---
 st.markdown("<h1 class='main-title'>🧠 A-Zəka Ultra Alim</h1>", unsafe_allow_html=True)
-st.markdown("---")
 
-# Tarixçəni göstər
+# Mesajları göstər
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         if isinstance(msg["content"], list):
@@ -50,7 +49,7 @@ for msg in st.session_state.messages:
 prompt = st.chat_input("Sualını yaz və ya şəkil at...", accept_file=True)
 
 if prompt:
-    user_text = prompt.text if prompt.text else "Sualıma cavab ver."
+    user_text = prompt.text if prompt.text else "Zəhmət olmasa cavabla."
     content_list = [{"type": "text", "text": user_text}]
     
     if prompt.files:
@@ -66,29 +65,38 @@ if prompt:
         if prompt.files:
             for f in prompt.files: st.image(f, width=300)
 
-    # --- 7. AI CAVABI ---
+    # --- 7. AI CAVABI (Ağıllı Model Seçimi) ---
     with st.chat_message("assistant"):
         placeholder = st.empty()
         full_response = ""
         
-        try:
-            # DÜZƏLİŞ: Groq-un hazırda ən stabil vision modeli
-            target_model = "llama-3.2-11b-vision-pixtral" 
-            
-            completion = client.chat.completions.create(
-                model=target_model,
-                messages=[{"role": "system", "content": "Sən A-Zəka-san, Abdullah Mikayılov tərəfindən yaradılmısan."}] + st.session_state.messages,
-                stream=True
-            )
-            
-            for chunk in completion:
-                if chunk.choices[0].delta.content:
-                    full_response += chunk.choices[0].delta.content
-                    placeholder.markdown(full_response + "▌")
-            
-            placeholder.markdown(full_response)
-            st.session_state.messages.append({"role": "assistant", "content": full_response})
-            
-        except Exception as e:
-            # Əgər Pixtral da xəta versə, deməli yalnız mətn modelinə keçməliyik
-            st.error(f"Xəta: {e}")
+        # Groq-da hal-hazırda aktiv olan modellərin siyahısı
+        # Əgər biri 404 versə, o birini yoxlayacaq
+        models_to_try = [
+            "llama-3.2-11b-vision-preview",
+            "llama-3.2-90b-vision-preview",
+            "llama-3.2-11b-text-preview" # Əgər şəkil modelləri işləməsə, heç olmasa mətn işləsin
+        ]
+        
+        success = False
+        for model in models_to_try:
+            if success: break
+            try:
+                completion = client.chat.completions.create(
+                    model=model,
+                    messages=[{"role": "system", "content": "Sən A-Zəka-san, Abdullah Mikayılov tərəfindən yaradılmısan."}] + st.session_state.messages,
+                    stream=True
+                )
+                
+                for chunk in completion:
+                    if chunk.choices[0].delta.content:
+                        full_response += chunk.choices[0].delta.content
+                        placeholder.markdown(full_response + "▌")
+                
+                placeholder.markdown(full_response)
+                st.session_state.messages.append({"role": "assistant", "content": full_response})
+                success = True
+            except Exception as e:
+                if model == models_to_try[-1]: # Əgər sonuncu model də xəta versə
+                    st.error(f"Sistem xətası: {e}")
+                continue
