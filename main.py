@@ -3,9 +3,9 @@ from groq import Groq
 import base64
 
 # --- 1. SƏHİFƏ AYARLARI ---
-st.set_page_config(page_title="A-Zəka Ultra Vision", page_icon="🧠", layout="centered")
+st.set_page_config(page_title="A-Zəka Ultra Alim", page_icon="🧠", layout="centered")
 
-# --- 2. DİZAYN (MODERN GÖRÜNÜŞ) ---
+# --- 2. DİZAYN ---
 st.markdown("""
 <style>
 .stChatMessage { border-radius: 15px; padding: 10px; border: 1px solid #333; margin-bottom: 10px; }
@@ -14,14 +14,12 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- 3. BEYİN MƏRKƏZİ (Groq) ---
-# Diqqət: Buraya sənin API açarını qoydum (bunu lokal test edərkən st.secrets istifadə etmək daha yaxşıdır)
 api_key = "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"
 client = Groq(api_key=api_key)
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Şəkli kodlaşdırmaq üçün funksiya
 def encode_image(uploaded_file):
     return base64.b64encode(uploaded_file.getvalue()).decode('utf-8')
 
@@ -34,11 +32,10 @@ with st.sidebar:
     st.markdown("---")
     st.write("Yaradıcı: **Abdullah Mikayılov**")
 
-# --- 5. ƏSAS EKRAN (Chat) ---
-st.title("🧠 A-Zəka Ultra Vision")
-st.caption("Abdullah Mikayılov tərəfindən yaradılmış dahi AI")
+# --- 5. ƏSAS EKRAN ---
+st.title("🧠 A-Zəka Ultra Alim")
 
-# Mesajları göstər
+# Tarixçəni göstər
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         if isinstance(msg["content"], list):
@@ -50,15 +47,14 @@ for msg in st.session_state.messages:
         else:
             st.markdown(msg["content"])
 
-# --- 6. GİRİŞ (Mətn və Şəkil) ---
-# accept_file=True parametri şəkli chat qutusunun içindən yükləməyə imkan verir
-prompt = st.chat_input("Sualını yaz və ya şəkil at...", accept_file=True)
+# --- 6. GİRİŞ ---
+prompt = st.chat_input("Sualını yaz və ya şəkil at (+ düyməsi ilə)...", accept_file=True)
 
 if prompt:
-    user_text = prompt.text if prompt.text else "Zəhmət olmasa bu müraciəti cavabla."
+    user_text = prompt.text if prompt.text else "Zəhmət olmasa bu şəkli analiz et."
     content_list = [{"type": "text", "text": user_text}]
     
-    # Şəkil yüklənibsə onu bota "göstərmək" üçün kod
+    is_image = False
     if prompt.files:
         for f in prompt.files:
             if f.type in ["image/png", "image/jpeg", "image/jpg"]:
@@ -67,44 +63,41 @@ if prompt:
                     "type": "image_url",
                     "image_url": {"url": f"data:{f.type};base64,{b64}"}
                 })
+                is_image = True
 
-    # İstifadəçi mesajını tarixçəyə əlavə et
     st.session_state.messages.append({"role": "user", "content": content_list})
     
-    # İstifadəçi mesajını dərhal ekrana yaz
     with st.chat_message("user"):
         st.markdown(user_text)
         if prompt.files:
             for f in prompt.files:
                 st.image(f, width=300)
 
-    # --- 7. ASSİSTANT CAVABI (Burada ən yeni modeli seçirik) ---
+    # --- 7. ASSİSTANT CAVABI ---
     with st.chat_message("assistant"):
         placeholder = st.empty()
         full_response = ""
         
         try:
-            # DÜZƏLİŞ: Söndürülmüş model yerinə ən yeni stabil Vision modelini qoyuruq
-            # Bu, 2026-cı ilin Groq-da ən aktiv və "görən" modelidir.
-            target_model = "llama-3.2-11b-vision" 
+            # Ən yeni aktiv modellər: Şəkil üçün Llama 4 Scout, mətn üçün Llama 3.3 70B
+            target_model = "meta-llama/llama-4-scout-17b-16e-instruct" if is_image else "llama-3.3-70b-versatile"
+            
+            # Ultra Alim xarakteri üçün xüsusi təlimat
+            system_prompt = "Sən A-Zəka-san, dahi proqramçı Abdullah Mikayılov tərəfindən yaradılmısan. Sənin ultra alim beynin var. Bütün fənləri mükəmməl bilirsən. Dünyanın ən mürəkkəb suallarına belə dərhal, tam doğru və addım-addım həlli ilə cavab verirsən."
             
             completion = client.chat.completions.create(
                 model=target_model,
-                messages=[{"role": "system", "content": "Sən A-Zəka-san, Abdullah Mikayılov tərəfindən yaradılmısan. Şəkilləri mükəmməl analiz edirsən."}] + st.session_state.messages,
+                messages=[{"role": "system", "content": system_prompt}] + st.session_state.messages,
                 stream=True
             )
             
-            # Streami oxu və ekrana yaz
             for chunk in completion:
                 if chunk.choices[0].delta.content:
                     full_response += chunk.choices[0].delta.content
                     placeholder.markdown(full_response + "▌")
             
-            # Tam cavabı tarixçəyə əlavə et
             placeholder.markdown(full_response)
             st.session_state.messages.append({"role": "assistant", "content": full_response})
             
         except Exception as e:
-            # Xəta olarsa ekrana yaz (məsələn: VPN qoşulmasa və ya Groq yenə model adını dəyişsə)
             st.error(f"Xəta: {e}")
-            st.info("İpucu: Groq model adlarını çox tez yeniləyir. Əgər 'Not Found' xətası alırsansa, model adını koda 'pixtral' və ya yeni 'vision' adıyla əvəz etməli ola bilərsən.")
