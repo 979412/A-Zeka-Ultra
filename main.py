@@ -15,7 +15,7 @@ SYSTEM_INSTRUCTION = (
 
 # --- 2. BEYİN QOŞULMASI ---
 # Bura Google AI Studio-dan aldığın API açarını qoymalısan
-API_KEY = "BURAYA_API_KEY_YAZILMALIDIR"
+API_KEY = "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"
 genai.configure(api_key=API_KEY)
 
 # Ən son model: Gemini 1.5 Flash (Şəkil və Riyaziyyat canavarı)
