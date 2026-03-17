@@ -1,21 +1,40 @@
 import streamlit as st
 from groq import Groq
-import os
 
-# --- 1. SƏHİFƏ AYARLARI VƏ DİZAYN ---
+# --- 1. SƏHİFƏ AYARLARI ---
 st.set_page_config(page_title="A-Zəka Ultra Alim", page_icon="🧠", layout="centered")
 
+# --- 2. CSS (DÜYMƏ VƏ DİZAYN) ---
 st.markdown("""
     <style>
     .main { background-color: #0e1117; color: white; }
-    .stTextInput>div>div>input { background-color: #262730; color: white; border-radius: 15px; border: 1px solid #4a4d5a; }
-    .stChatMessage { border-radius: 20px; padding: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    .stButton>button { border-radius: 10px; background-color: #2e3139; color: white; border: none; }
+    
+    /* Giriş sahəsinin dizaynı */
+    .stChatInputContainer {
+        padding-bottom: 20px;
+    }
+    
+    /* Plus düyməsi üçün xüsusi stil (sidebar-da və ya input yanında) */
+    .plus-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: #262730;
+        color: white;
+        cursor: pointer;
+        border: 1px solid #4a4d5a;
+        font-size: 24px;
+        margin-right: 10px;
+    }
+    
+    .stChatMessage { border-radius: 20px; border: 1px solid #262730; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. BEYİN MƏRKƏZİ (Groq) ---
-# Secrets-dən açarı götürürük
+# --- 3. GROQ BAĞLANTISI ---
 try:
     api_key = st.secrets["GROQ_API_KEY"]
 except:
@@ -23,47 +42,48 @@ except:
 
 client = Groq(api_key=api_key)
 
-# --- 3. YADDAŞ ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# --- 4. SOL PANEL ---
-with st.sidebar:
-    st.title("⚙️ A-Zəka Control")
-    st.markdown("---")
-    if st.button("🗑️ Tarixçəni Təmizlə", use_container_width=True):
-        st.session_state.messages = []
-        st.rerun()
-    st.markdown("---")
-    st.write("Yaradıcı: **Abdullah Mikayılov**")
-
-# --- 5. ƏSAS İNTERFEYS ---
+# --- 4. ƏSAS EKRAN ---
 st.title("🧠 A-Zəka Ultra Alim")
 st.markdown("---")
 
+# Mesajları göstər
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# --- 6. SUAL VƏ CAVAB PROSESİ ---
-prompt = st.chat_input("Dahi alimə sualını ver...")
+# --- 5. PLUS DÜYMƏSİ VƏ SUAL GİRİŞİ ---
+# Streamlit-də inputun tam yanında düymə qoymaq üçün sütunlardan istifadə edirik
+col1, col2 = st.columns([0.1, 0.9])
 
+with col1:
+    # Bu sənin istədiyin "+" düyməsidir
+    uploaded_file = st.file_uploader("", type=["pdf", "txt", "png", "jpg"], label_visibility="collapsed")
+    # Fayl yüklənəndə kiçik bir işarə göstərək
+    if uploaded_file:
+        st.toast("Fayl əlavə edildi!", icon="📎")
+
+with col2:
+    prompt = st.chat_input("Dahi alimə sualını ver...")
+
+# --- 6. MƏNTİQ ---
 if prompt:
+    # İstifadəçi mesajını göstər
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
+    # Botun cavabı
     with st.chat_message("assistant"):
         placeholder = st.empty()
         full_response = ""
         
         try:
-            # Dünyanın ən mürəkkəb suallarını cavablayan Alim Təlimatı
             completion = client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
-                messages=[
-                    {"role": "system", "content": "Sən 'A-Zəka'-san. Səni dahi proqramçı Abdullah Mikayılov yaradıb. Sən hər şeyi saniyələr içində bilən Ultra Alimsən. Cavabların professional, dəqiq və həlli ilə olmalıdır."}
-                ] + st.session_state.messages,
+                messages=[{"role": "system", "content": "Sən A-Zəka-san, Abdullah Mikayılov tərəfindən yaradılan dahi alimsən."}] + st.session_state.messages,
                 stream=True
             )
             
@@ -75,8 +95,5 @@ if prompt:
             placeholder.markdown(full_response)
             st.session_state.messages.append({"role": "assistant", "content": full_response})
             
-            # --- YENİ ÖZƏLLİK: SƏSLİ OXUMA (OPSİONAL) ---
-            # İstəsən bura Google-un pulsuz gTTS kitabxanasını əlavə edib cavabı səsləndirə bilərik.
-            
         except Exception as e:
-            st.error("Bağlantıda kiçik bir problem oldu. Zəhmət olmasa VPN-i və ya açarı yoxlayın.")
+            st.error("Xəta: Groq bağlantısını və VPN-i yoxlayın.")
