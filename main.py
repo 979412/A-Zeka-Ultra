@@ -5,7 +5,7 @@ import base64
 # --- 1. SƏHİFƏ AYARLARI ---
 st.set_page_config(page_title="A-Zəka Ultra Alim", page_icon="🧠", layout="centered")
 
-# --- 2. DİZAYN ---
+# --- 2. MODERN DİZAYN ---
 st.markdown("""
 <style>
     .stApp { background-color: #ffffff; }
@@ -14,8 +14,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. BEYİN MƏRKƏZİ ---
-api_key = "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"
+# --- 3. BEYİN MƏRKƏZİ (YENİ API AÇARIN) ---
+api_key = "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"
 client = Groq(api_key=api_key)
 
 if "messages" not in st.session_state:
@@ -34,8 +34,8 @@ with st.sidebar:
 
 # --- 5. ƏSAS EKRAN ---
 st.markdown("<h1 class='main-title'>🧠 A-Zəka Ultra Alim</h1>", unsafe_allow_html=True)
+st.markdown("---")
 
-# Mesajları göstər
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         if isinstance(msg["content"], list):
@@ -49,14 +49,16 @@ for msg in st.session_state.messages:
 prompt = st.chat_input("Sualını yaz və ya şəkil at...", accept_file=True)
 
 if prompt:
-    user_text = prompt.text if prompt.text else "Zəhmət olmasa cavabla."
+    user_text = prompt.text if prompt.text else "Zəhmət olmasa bu müraciəti cavabla."
     content_list = [{"type": "text", "text": user_text}]
     
+    is_image = False
     if prompt.files:
         for f in prompt.files:
             if f.type in ["image/png", "image/jpeg", "image/jpg"]:
                 b64 = encode_image(f)
                 content_list.append({"type": "image_url", "image_url": {"url": f"data:{f.type};base64,{b64}"}})
+                is_image = True
 
     st.session_state.messages.append({"role": "user", "content": content_list})
     
@@ -65,38 +67,29 @@ if prompt:
         if prompt.files:
             for f in prompt.files: st.image(f, width=300)
 
-    # --- 7. AI CAVABI (Ağıllı Model Seçimi) ---
+    # --- 7. AI CAVABI ---
     with st.chat_message("assistant"):
         placeholder = st.empty()
         full_response = ""
         
-        # Groq-da hal-hazırda aktiv olan modellərin siyahısı
-        # Əgər biri 404 versə, o birini yoxlayacaq
-        models_to_try = [
-            "llama-3.2-11b-vision-preview",
-            "llama-3.2-90b-vision-preview",
-            "llama-3.2-11b-text-preview" # Əgər şəkil modelləri işləməsə, heç olmasa mətn işləsin
-        ]
-        
-        success = False
-        for model in models_to_try:
-            if success: break
-            try:
-                completion = client.chat.completions.create(
-                    model=model,
-                    messages=[{"role": "system", "content": "Sən A-Zəka-san, Abdullah Mikayılov tərəfindən yaradılmısan."}] + st.session_state.messages,
-                    stream=True
-                )
-                
-                for chunk in completion:
-                    if chunk.choices[0].delta.content:
-                        full_response += chunk.choices[0].delta.content
-                        placeholder.markdown(full_response + "▌")
-                
-                placeholder.markdown(full_response)
-                st.session_state.messages.append({"role": "assistant", "content": full_response})
-                success = True
-            except Exception as e:
-                if model == models_to_try[-1]: # Əgər sonuncu model də xəta versə
-                    st.error(f"Sistem xətası: {e}")
-                continue
+        # Mətn sualları üçün ən yeni Llama 3.3, şəkillər üçün 3.2 Vision
+        target_model = "llama-3.2-11b-vision-preview" if is_image else "llama-3.3-70b-versatile"
+            
+        try:
+            completion = client.chat.completions.create(
+                model=target_model,
+                messages=[{"role": "system", "content": "Sən A-Zəka-san, Abdullah Mikayılov tərəfindən yaradılmısan. Dahi alim kimi cavab ver."}] + st.session_state.messages,
+                stream=True
+            )
+            
+            for chunk in completion:
+                if chunk.choices[0].delta.content:
+                    full_response += chunk.choices[0].delta.content
+                    placeholder.markdown(full_response + "▌")
+            
+            placeholder.markdown(full_response)
+            st.session_state.messages.append({"role": "assistant", "content": full_response})
+            
+        except Exception as e:
+            st.error(f"Xəta: {e}")
+            st.info("İpucu: VPN-in işlədiyindən əmin ol və səhifəni yenilə.")
