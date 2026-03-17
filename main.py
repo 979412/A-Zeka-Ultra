@@ -3,98 +3,96 @@ from groq import Groq
 import base64
 
 # --- 1. SƏHİFƏ AYARLARI ---
-st.set_page_config(page_title="A-Zəka Ultra Alim", page_icon="🧠", layout="wide")
+st.set_page_config(page_title="A-Zəka Ultra Alim", page_icon="🧠", layout="centered")
 
-# --- 2. PROFESSIONAL DİZAYN ---
+# --- 2. PEŞƏKAR DİZAYN (CSS) ---
 st.markdown("""
 <style>
-    .stApp { background-color: #fcfcfc; }
-    .stChatMessage { border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 15px; border-left: 5px solid #007bff; }
-    .main-title { color: #0E1117; text-align: center; font-weight: 900; font-size: 3rem; margin-top: -50px; }
+    .stApp { background-color: #ffffff; }
+    .stChatMessage { border-radius: 15px; padding: 15px; margin-bottom: 10px; border: 1px solid #f0f2f6; }
+    .main-title { color: #1E1E1E; text-align: center; font-weight: 800; margin-top: -50px; }
+    .sidebar-text { font-size: 0.9rem; color: #555; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. BEYİN MƏRKƏZİ ---
+# --- 3. BEYİN MƏRKƏZİ (Groq) ---
+# Sənin aktiv API açarın
 api_key = "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"
 client = Groq(api_key=api_key)
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# Şəkli kodlaşdırmaq üçün funksiya
 def encode_image(uploaded_file):
     return base64.b64encode(uploaded_file.getvalue()).decode('utf-8')
 
-# --- 4. SOL PANEL ---
+# --- 4. SOL PANEL (Ayarlar) ---
 with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/6134/6134346.png", width=80)
-    st.title("A-Zəka Panel")
-    st.info("Status: **R1-Thinking Aktiv** 🔥")
+    st.markdown("<h2 style='text-align: center;'>⚙️ Ayarlar</h2>", unsafe_allow_html=True)
+    st.markdown("<p class='sidebar-text'>Yaradıcı: <b>Abdullah Mikayılov</b></p>", unsafe_allow_html=True)
+    st.markdown("<p class='sidebar-text'>Rejim: <b>Ultra Alim (Görmə Aktiv)</b></p>", unsafe_allow_html=True)
+    
     if st.button("🗑️ Tarixçəni Sıfırla", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
-    st.markdown("---")
-    st.write("👨‍💻 Yaradıcı: **Abdullah Mikayılov**")
 
 # --- 5. ƏSAS EKRAN ---
 st.markdown("<h1 class='main-title'>🧠 A-Zəka Ultra Alim</h1>", unsafe_allow_html=True)
+st.markdown("---")
 
+# Mesaj tarixçəsini göstər
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         if isinstance(msg["content"], list):
             for part in msg["content"]:
                 if part["type"] == "text": st.markdown(part["text"])
-                elif part["type"] == "image_url": st.image(part["image_url"]["url"], width=400)
+                elif part["type"] == "image_url": st.image(part["image_url"]["url"], width=300)
         else:
             st.markdown(msg["content"])
 
-# --- 6. GİRİŞ ---
-prompt = st.chat_input("Riyazi problemi daxil edin...", accept_file=True)
+# --- 6. GİRİŞ (Mətn və Şəkil) ---
+prompt = st.chat_input("Dahi səviyyəli sualını daxil et və ya şəkil at...", accept_file=True)
 
 if prompt:
-    user_text = prompt.text if prompt.text else "Zəhmət olmasa bu problemi ən dəqiq şəkildə həll et."
-    new_user_content = [{"type": "text", "text": user_text}]
+    user_text = prompt.text if prompt.text else "Zəhmət olmasa bu vizual materialı analiz et."
+    content_list = [{"type": "text", "text": user_text}]
     
-    is_image = False
     if prompt.files:
         for f in prompt.files:
             if f.type in ["image/png", "image/jpeg", "image/jpg"]:
                 b64 = encode_image(f)
-                new_user_content.append({"type": "image_url", "image_url": {"url": f"data:{f.type};base64,{b64}"}})
-                is_image = True
+                content_list.append({
+                    "type": "image_url",
+                    "image_url": {"url": f"data:{f.type};base64,{b64}"}
+                })
 
-    st.session_state.messages.append({"role": "user", "content": new_user_content})
+    # İstifadəçi mesajını tarixçəyə əlavə et
+    st.session_state.messages.append({"role": "user", "content": content_list})
     
+    # Ekranda göstər
     with st.chat_message("user"):
         st.markdown(user_text)
         if prompt.files:
-            for f in prompt.files: st.image(f, width=400)
+            for f in prompt.files: st.image(f, width=300)
 
-    # --- 7. ASSİSTANT CAVABI (Güncəl Modellər) ---
+    # --- 7. ASSİSTANT CAVABI (Stabil Model) ---
     with st.chat_message("assistant"):
         placeholder = st.empty()
         full_response = ""
         
         try:
-            # GÜNCƏL MODELLƏR:
-            if is_image:
-                # Şəkil analiz etmək üçün ən güclü aktiv Vision modeli
-                target_model = "llama-3.2-90b-vision-preview"
-            else:
-                # Riyaziyyatda səhv etməmək üçün ən güclü düşünən beyin
-                target_model = "deepseek-r1-distill-llama-70b" 
-            
-            system_prompt = (
-                "Sən A-Zəka-san, Abdullah Mikayılov tərəfindən yaradılmış dahi riyaziyyatçısan. "
-                "Bütün riyazi ifadələri mütləq LaTeX formatında ($...$ və ya $$...$$) yaz.\n"
-                "Həlli dərhal vermə, əvvəlcə dərindən düşün və addım-addım professional izah et."
-            )
+            # DÜZƏLİŞ: Köhnə "preview" modelini silib, tam stabil olan Vision modelini hədəf alırıq
+            # Hazırda Groq-un ən aktiv və stabil "görən" modeli budur:
+            target_model = "llama-3.2-11b-vision-preview" 
             
             completion = client.chat.completions.create(
                 model=target_model,
-                messages=[{"role": "system", "content": system_prompt}] + st.session_state.messages,
+                messages=[{"role": "system", "content": "Sən A-Zəka-san, Abdullah Mikayılov tərəfindən yaradılmısan. Şəkilləri mükəmməl analiz edirsən."}] + st.session_state.messages,
                 stream=True
             )
             
+            # Streami oxu və ekrana yaz
             for chunk in completion:
                 if chunk.choices[0].delta.content:
                     full_response += chunk.choices[0].delta.content
@@ -104,19 +102,5 @@ if prompt:
             st.session_state.messages.append({"role": "assistant", "content": full_response})
             
         except Exception as e:
-            # Əgər yenə model xətası çıxarsa, ehtiyat modelə keçid
-            st.warning("Model yenilənir, ehtiyat beyinə keçid edilir...")
-            try:
-                completion = client.chat.completions.create(
-                    model="llama-3.3-70b-versatile",
-                    messages=[{"role": "system", "content": "Riyaziyyatı dəqiq həll et."}] + st.session_state.messages,
-                    stream=True
-                )
-                for chunk in completion:
-                    if chunk.choices[0].delta.content:
-                        full_response += chunk.choices[0].delta.content
-                        placeholder.markdown(full_response + "▌")
-                placeholder.markdown(full_response)
-                st.session_state.messages.append({"role": "assistant", "content": full_response})
-            except:
-                st.error(f"Sistem xətası: {e}")
+            # Əgər VPN yoxdursa və ya model yenə xəta versə, burası işləyəcək
+            st.error(f"Sistem xətası baş verdi: {e}")
