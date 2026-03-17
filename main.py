@@ -14,7 +14,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. BEYİN MƏRKƏZİ (YENİ API AÇARIN) ---
+# --- 3. BEYİN MƏRKƏZİ (Sənin Yeni Aktiv Açarın) ---
 api_key = "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"
 client = Groq(api_key=api_key)
 
@@ -34,14 +34,14 @@ with st.sidebar:
 
 # --- 5. ƏSAS EKRAN ---
 st.markdown("<h1 class='main-title'>🧠 A-Zəka Ultra Alim</h1>", unsafe_allow_html=True)
-st.markdown("---")
 
+# Tarixçəni göstər
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         if isinstance(msg["content"], list):
             for part in msg["content"]:
                 if part["type"] == "text": st.markdown(part["text"])
-                elif part["type"] == "image_url": st.image(part["image_url"]["url"], width=300)
+                elif part["type"] == "image_url": st.image(part["image_url"]["url"], width=350)
         else:
             st.markdown(msg["content"])
 
@@ -65,20 +65,20 @@ if prompt:
     with st.chat_message("user"):
         st.markdown(user_text)
         if prompt.files:
-            for f in prompt.files: st.image(f, width=300)
+            for f in prompt.files: st.image(f, width=350)
 
-    # --- 7. AI CAVABI ---
+    # --- 7. AI CAVABI (Stabil Modellər) ---
     with st.chat_message("assistant"):
         placeholder = st.empty()
         full_response = ""
         
-        # Mətn sualları üçün ən yeni Llama 3.3, şəkillər üçün 3.2 Vision
+        # Mətn üçün Llama 3.3, Şəkil analiz etmək üçün 3.2 Vision (Stabil versiyalar)
         target_model = "llama-3.2-11b-vision-preview" if is_image else "llama-3.3-70b-versatile"
             
         try:
             completion = client.chat.completions.create(
                 model=target_model,
-                messages=[{"role": "system", "content": "Sən A-Zəka-san, Abdullah Mikayılov tərəfindən yaradılmısan. Dahi alim kimi cavab ver."}] + st.session_state.messages,
+                messages=[{"role": "system", "content": "Sən A-Zəka-san, Abdullah Mikayılov tərəfindən yaradılmısan. Dahi riyaziyyatçı və alim kimi cavab ver."}] + st.session_state.messages,
                 stream=True
             )
             
@@ -92,4 +92,3 @@ if prompt:
             
         except Exception as e:
             st.error(f"Xəta: {e}")
-            st.info("İpucu: VPN-in işlədiyindən əmin ol və səhifəni yenilə.")
