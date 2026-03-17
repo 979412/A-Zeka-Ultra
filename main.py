@@ -4,38 +4,38 @@ from groq import Groq
 # --- 1. SƏHİFƏ AYARLARI ---
 st.set_page_config(page_title="A-Zəka Ultra Alim", page_icon="🧠", layout="centered")
 
-# --- 2. CSS: PLUS DÜYMƏSİNİ GÖZƏLLƏŞDİRMƏK ---
+# --- 2. CSS: BÖYÜK QUTUNU GİZLƏDİB, BALACA "+" DÜYMƏSİ ETMƏK ---
 st.markdown("""
     <style>
     .main { background-color: #0e1117; color: white; }
     
-    /* Standart yükləmə qutusunu gizlət və balaca düymə et */
-    .stFileUploader {
-        width: 45px;
-        padding-top: 35px;
-    }
+    /* 1. Böyük File Uploader sahəsini gizlət */
     .stFileUploader section {
-        padding: 0;
-        min-height: 40px;
-        background-color: #262730;
-        border: 1px solid #4a4d5a;
-        border-radius: 50%;
+        display: none !important;
     }
-    .stFileUploader label { display: none; }
-    .stFileUploader div div { display: none; } /* "Drag and drop" yazısını gizlədir */
     
-    /* Plus işarəsini mərkəzə gətir */
-    .stFileUploader section::before {
-        content: "+";
-        color: white;
-        font-size: 24px;
-        display: flex;
-        justify-content: center;
+    /* 2. Özəl bir "+" düyməsi yaradın */
+    .custom-plus-button {
+        display: inline-flex;
         align-items: center;
-        height: 100%;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: #262730;
+        color: white;
         cursor: pointer;
+        border: 1px solid #4a4d5a;
+        font-size: 24px;
+        position: relative;
+        top: 20px; /* Input qutusuna uyğunlaşdırmaq üçün */
     }
-
+    
+    .custom-plus-button:hover {
+        background-color: #3e404b;
+    }
+    
+    /* Mesaj qutularını gözəlləşdir */
     .stChatMessage { border-radius: 20px; border: 1px solid #262730; }
     </style>
     """, unsafe_allow_html=True)
@@ -60,26 +60,36 @@ for msg in st.session_state.messages:
         st.markdown(msg["content"])
 
 # --- 5. İSTƏDİYİN DÜYMƏ VƏ GİRİŞ SAHƏSİ ---
-col1, col2 = st.columns([0.15, 0.85])
+# Düyməni və input qutusunu yan-yana gətirmək üçün sütunlardan istifadə edirik
+col1, col2 = st.columns([0.1, 0.9])
 
 with col1:
-    # Bu artıq sadəcə balaca bir '+' düyməsidir
-    uploaded_file = st.file_uploader("", type=["png", "jpg", "jpeg", "pdf"], label_visibility="collapsed")
-
+    # Bu, o böyük qutunun yerinə çıxan balaca dairəvi '+' düyməsidir
+    # İstifadəçi buna basanda fayl seçmə pəncərəsi açılacaq
+    uploaded_file = st.file_uploader("+", type=["png", "jpg", "jpeg", "pdf"], label_visibility="collapsed")
+    
 with col2:
     prompt = st.chat_input("Dahi alimə sualını ver...")
 
-# --- 6. MƏNTİQ ---
+# --- 6. PROSES VƏ MƏNTİQ ---
 if prompt:
-    display_text = prompt
+    display_content = prompt
+    
+    # Əgər fayl yüklənibsə, mesajın başına əlavə edirik
     if uploaded_file:
-        display_text = f"📎 **Fayl:** {uploaded_file.name}\n\n{prompt}"
-        st.toast(f"{uploaded_file.name} əlavə edildi!", icon="✅")
+        # Şəkil yüklənibsə, şəkli göstərək
+        if uploaded_file.type.startswith('image/'):
+            st.image(uploaded_file, caption=f"Yüklənən şəkil: {uploaded_file.name}", width=200)
+            display_content = f"📎 **Şəkil:** {uploaded_file.name}\n\n" + prompt
+        else:
+            display_content = f"📎 **Fayl:** {uploaded_file.name}\n\n" + prompt
 
-    st.session_state.messages.append({"role": "user", "content": display_text})
+    # İstifadəçi mesajını yaddaşa yaz
+    st.session_state.messages.append({"role": "user", "content": display_content})
     with st.chat_message("user"):
-        st.markdown(display_text)
+        st.markdown(display_content)
 
+    # Botun cavabı
     with st.chat_message("assistant"):
         placeholder = st.empty()
         full_response = ""
@@ -87,9 +97,10 @@ if prompt:
         try:
             completion = client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
-                messages=[{"role": "system", "content": "Sən A-Zəka-san, dahi proqramçı Abdullah Mikayılov tərəfindən yaradılmısan."}] + st.session_state.messages,
+                messages=[{"role": "system", "content": "Sən A-Zəka-san, Abdullah Mikayılov tərəfindən yaradılmısan."}] + st.session_state.messages,
                 stream=True
             )
+            
             for chunk in completion:
                 if chunk.choices[0].delta.content:
                     full_response += chunk.choices[0].delta.content
@@ -99,4 +110,4 @@ if prompt:
             st.session_state.messages.append({"role": "assistant", "content": full_response})
             
         except Exception as e:
-            st.error("Xəta baş verdi!")
+            st.error(f"Xəta: Groq bağlantısı kəsildi! VPN-i qoşmağı unutma.")
