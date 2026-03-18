@@ -1,100 +1,74 @@
 import streamlit as st
-import google.generativeai as genai
-from PIL import Image
+from groq import Groq
 
-# --- 1. PROFESSIONAL VƏ İŞIQLI DİZAYN ---
-st.set_page_config(page_title="A-Zəka Ultra", page_icon="🧠", layout="wide")
+# --- 1. SƏHİFƏ AYARLARI ---
+st.set_page_config(page_title="A-Zəka Ultra Alim", page_icon="🧠", layout="centered")
 
+# --- 2. GİZLİ API QURULUMU ---
+# Bu hissə proqramı serverə qoyanda açarı 'Secrets' hissəsindən götürəcək
+try:
+    # Əgər lokalda işlədirsənsə, birbaşa açarı bura yaza bilərsən
+    # Amma server üçün st.secrets istifadə etmək mütləqdir
+    api_key = st.secrets["GROQ_API_KEY"]
+except:
+    # Lokalda yoxlamaq üçün öz açarını bura müvəqqəti qoya bilərsən
+    api_key = "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"
+
+client = Groq(api_key=api_key)
+
+# --- 3. ULTRA ALİM TƏLİMATI ---
+system_prompt = """
+Sən 'A-Zəka'-san. Səni dahi proqramçı Abdullah Mikayılov yaradıb. 
+Sən bütün dünya üçün çalışan, hər şeyi bilən Ultra Alimsən. 
+Saniyələr içində ən mürəkkəb sualları həlli ilə cavablandırırsan.
+"""
+
+# --- 4. DİZAYN (CSS) ---
 st.markdown("""
-<style>
-    .stApp { background-color: #ffffff; color: #1e293b; }
-    
-    /* Başlıq Dizaynı */
-    .main-header {
-        text-align: center;
-        color: #2563eb;
-        font-size: 3.5rem;
-        font-weight: 800;
-        margin-bottom: 0px;
-    }
-    .sub-text { text-align: center; color: #64748b; font-size: 1.1rem; margin-bottom: 30px; }
-    
-    /* Çat Mesajları */
-    .stChatMessage { border-radius: 12px; border: 1px solid #e2e8f0; background-color: #f8fafc !important; }
-    
-    /* Yan Panel */
-    [data-testid="stSidebar"] { background-color: #f1f5f9 !important; border-right: 1px solid #e2e8f0; }
-    
-    /* Düymələr */
-    .stButton>button {
-        width: 100%; border-radius: 8px; background-color: #ef4444; color: white;
-        border: none; padding: 10px; font-weight: 600;
-    }
-</style>
-""", unsafe_allow_html=True)
+    <style>
+    .main { background-color: #0e1117; color: white; }
+    .stTextInput>div>div>input { background-color: #262730; color: white; border-radius: 12px; }
+    .stChatMessage { border-radius: 15px; }
+    </style>
+    """, unsafe_allow_html=True)
 
-# --- 2. AYARLAR VƏ BEYİN ---
-with st.sidebar:
-    st.markdown("<h2 style='text-align:center;'>⚙️ Ayarlar</h2>", unsafe_allow_html=True)
-    st.image("https://cdn-icons-png.flaticon.com/512/4712/4712035.png", width=100)
-    st.info("Yaradıcı: Abdullah Mikayılov")
-    
-    # Bura öz Gemini API Key-ni daxil et
-    api_key = st.text_input("🔑 Gemini API Key:", type="password")
-    
-    st.divider()
-    if st.button("🗑️ Tarixçəni Təmizlə"):
-        st.session_state.messages = []
-        st.rerun()
-
-# Beyini işə sal
-if api_key:
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
-else:
-    st.warning("⚠️ Davam etmək üçün sol panelə Gemini API Key daxil edin.")
-    st.stop()
-
+# --- 5. YADDAŞ VƏ SÖHBƏT ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# --- 3. ƏSAS EKRAN ---
-st.markdown("<h1 class='main-header'>A-Zəka Ultra</h1>", unsafe_allow_html=True)
-st.markdown("<p class='sub-text'>Dahi Abdullah Mikayılov tərəfindən idarə olunan 10x zəka.</p>", unsafe_allow_html=True)
+st.title("🧠 A-Zəka Ultra Alim")
+st.caption(f"Yaradıcı: Abdullah Mikayılov | Model: Llama-3 (Saniyəlik Sürət)")
 
-# Tarixçəni göstər
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# --- 4. GİRİŞ VƏ "+" DÜYMƏSİ ---
-# accept_file=True mütləqdir ki, "+" düyməsi görünsün
-prompt = st.chat_input("Sualını yaz və ya şəkil at (+)...", accept_file=True)
+# --- 6. İSTİFADƏÇİ GİRİŞİ ---
+prompt = st.chat_input("Dahi alimə sualını ver...")
 
 if prompt:
-    user_text = prompt.text if prompt.text else "Bu şəkli analiz et."
-    
+    st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
-        st.markdown(user_text)
-        if prompt.files:
-            for f in prompt.files:
-                img = Image.open(f)
-                st.image(img, width=400)
+        st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        with st.spinner("A-Zəka düşünür..."):
-            try:
-                # Mətn və şəkli eyni anda göndəririk
-                content_to_send = [user_text]
-                if prompt.files:
-                    for f in prompt.files:
-                        content_to_send.append(Image.open(f))
-                
-                response = model.generate_content(content_to_send)
-                res_text = response.text
-                st.markdown(res_text)
-                
-                st.session_state.messages.append({"role": "user", "content": user_text})
-                st.session_state.messages.append({"role": "assistant", "content": res_text})
-            except Exception as e:
-                st.error(f"Xəta: {str(e)}")
+        placeholder = st.empty()
+        full_response = ""
+        
+        try:
+            completion = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[{"role": "system", "content": system_prompt}] + st.session_state.messages,
+                stream=True
+            )
+            
+            for chunk in completion:
+                if chunk.choices[0].delta.content:
+                    full_response += chunk.choices[0].delta.content
+                    placeholder.markdown(full_response + "▌")
+            
+            placeholder.markdown(full_response)
+            st.session_state.messages.append({"role": "assistant", "content": full_response})
+            
+        except Exception as e:
+            st.error("Bağlantı xətası! Zəhmət olmasa VPN-in aktiv olduğunu yoxlayın.")
