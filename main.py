@@ -4,23 +4,37 @@ from PIL import Image
 import base64
 import io
 
-# --- 1. DİZAYN ---
-st.set_page_config(page_title="A-Zəka Ultra", page_icon="🧠", layout="centered")
+# --- 1. PREMİUM VİSUAL AYARLAR ---
+st.set_page_config(page_title="A-Zəka Ultra", page_icon="🔮", layout="wide")
 
 st.markdown("""
-    <style>
-    .stApp { background-color: #f8fafc; }
-    .stChatMessage { border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 10px; }
-    .main-title { color: #2563eb; text-align: center; font-weight: 800; }
-    </style>
-    """, unsafe_allow_html=True)
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap');
+    .stApp { background-color: #ffffff; color: #1e293b; font-family: 'Inter', sans-serif; }
+    
+    /* Mesaj Balonları */
+    .stChatMessage { border-radius: 15px; border: 1px solid #e2e8f0; padding: 15px; margin-bottom: 10px; }
+    
+    /* Yan Panel */
+    [data-testid="stSidebar"] { background-color: #f1f5f9 !important; border-right: 1px solid #e2e8f0; }
+    
+    /* Başlıq */
+    .ultra-title { color: #2563eb; text-align: center; font-size: 3rem; font-weight: 800; margin-bottom: 0px; }
+</style>
+""", unsafe_allow_html=True)
 
-# --- 2. BEYİN (STABİL MODEL) ---
+# --- 2. BEYİN KONFİQURASİYASI ---
+# ƏGƏR BU AÇAR İŞLƏMƏSƏ, YENİSİNİ BURA YAPIŞDIR
 API_KEY = "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"
-client = Groq(api_key=API_KEY)
 
-# BU MODEL HAZIRDA GROQ-DA ƏN STABİL VİSİON MODELİDİR
-STABLE_VISION_MODEL = "llama-3.2-11b-vision-preview"
+def get_client():
+    try:
+        return Groq(api_key=API_KEY)
+    except:
+        return None
+
+client = get_client()
+STABLE_MODEL = "llama-3.2-11b-vision-preview" # Həm şəkil, həm mətn üçün ən stabil model
 
 def encode_image(image):
     buffered = io.BytesIO()
@@ -30,22 +44,24 @@ def encode_image(image):
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# --- 3. PANEL ---
+# --- 3. YAN PANEL ---
 with st.sidebar:
-    st.title("⚙️ Ayarlar")
-    if st.button("🗑️ Tarixçəni Sil", use_container_width=True):
+    st.markdown("<h2 style='text-align:center;'>⚙️ Panel</h2>", unsafe_allow_html=True)
+    st.info("Yaradıcı: Abdullah Mikayılov")
+    if st.button("🗑️ Tarixçəni Təmizlə"):
         st.session_state.messages = []
         st.rerun()
-    st.write("Yaradıcı: **Abdullah Mikayılov**")
 
-st.markdown("<h1 class='main-title'>🧠 A-Zəka Ultra</h1>", unsafe_allow_html=True)
+# --- 4. ƏSAS EKRAN ---
+st.markdown("<h1 class='ultra-title'>A-Zəka Ultra</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; color:#64748b;'>Dahi Abdullah tərəfindən idarə olunan 10x sistem.</p>", unsafe_allow_html=True)
 
-# Mesajlar
+# Tarixçəni göstər
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# --- 4. GİRİŞ ---
+# --- 5. GİRİŞ VƏ MƏNTİQ ---
 prompt = st.chat_input("Sualını yaz və ya şəkil at (+)...", accept_file=True)
 
 if prompt:
@@ -67,10 +83,10 @@ if prompt:
         full_response = ""
         
         try:
+            # Şəkilli və ya mətni sorğu formatı
             if image_b64:
-                # Şəkilli sorğu formatı
                 messages = [
-                    {"role": "system", "content": "Sən Abdullahın dahi A-Zəka-sısan. Şəkilləri görə bilirsən."},
+                    {"role": "system", "content": "Sən Abdullahın dahi A-Zəka-sısan. Şəkilləri dərindən analiz edirsən."},
                     {
                         "role": "user",
                         "content": [
@@ -80,11 +96,10 @@ if prompt:
                     }
                 ]
             else:
-                # Sadə mətn sorğusu
                 messages = [{"role": "system", "content": "Sən Abdullahın dahi A-Zəka-sısan."}] + st.session_state.messages
 
             completion = client.chat.completions.create(
-                model=STABLE_VISION_MODEL,
+                model=STABLE_MODEL,
                 messages=messages,
                 stream=True
             )
@@ -98,4 +113,7 @@ if prompt:
             st.session_state.messages.append({"role": "assistant", "content": full_response})
             
         except Exception as e:
-            st.error(f"Xəta: {str(e)}")
+            if "401" in str(e):
+                st.error("❌ Xəta: API Key səhvdir və ya ləğv edilib. Lütfən yeni bir API Key daxil edin.")
+            else:
+                st.error(f"⚠️ Texniki xəta: {str(e)}")
