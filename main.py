@@ -4,24 +4,23 @@ from PIL import Image
 import base64
 import io
 
-# --- 1. GÜCLÜ VƏ ŞİFFFAF DİZAYN ---
+# --- 1. DİZAYN ---
 st.set_page_config(page_title="A-Zəka Ultra", page_icon="🧠", layout="centered")
 
 st.markdown("""
     <style>
-    .stApp { background-color: #f0f2f6; }
-    .stChatMessage { border-radius: 10px; border: 1px solid #d1d5db; background: white !important; }
-    .main-title { color: #1e40af; text-align: center; font-weight: 800; }
+    .stApp { background-color: #f8fafc; }
+    .stChatMessage { border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 10px; }
+    .main-title { color: #2563eb; text-align: center; font-weight: 800; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. BEYİN MƏRKƏZİ ---
-# Sənin işlək API açarın
-API_KEY = "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"
+# --- 2. BEYİN (STABİL MODEL) ---
+API_KEY = "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"
 client = Groq(api_key=API_KEY)
 
-# DİQQƏT: Şəkil üçün bu model mütləqdir. Əgər bu işləməsə, Groq-da vision icazən yoxdur deməkdir.
-VISION_MODEL = "llama-3.2-90b-vision-preview" 
+# BU MODEL HAZIRDA GROQ-DA ƏN STABİL VİSİON MODELİDİR
+STABLE_VISION_MODEL = "llama-3.2-11b-vision-preview"
 
 def encode_image(image):
     buffered = io.BytesIO()
@@ -31,26 +30,26 @@ def encode_image(image):
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# --- 3. YAN PANEL ---
+# --- 3. PANEL ---
 with st.sidebar:
-    st.markdown("### ⚙️ Ayarlar")
+    st.title("⚙️ Ayarlar")
     if st.button("🗑️ Tarixçəni Sil", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
     st.write("Yaradıcı: **Abdullah Mikayılov**")
 
-st.markdown("<h1 class='main-title'>🧠 A-Zəka Ultra Alim</h1>", unsafe_allow_html=True)
+st.markdown("<h1 class='main-title'>🧠 A-Zəka Ultra</h1>", unsafe_allow_html=True)
 
-# Mesajları göstər
+# Mesajlar
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# --- 4. GİRİŞ (+) ---
+# --- 4. GİRİŞ ---
 prompt = st.chat_input("Sualını yaz və ya şəkil at (+)...", accept_file=True)
 
 if prompt:
-    user_text = prompt.text if prompt.text else "Zəhmət olmasa bu şəkli analiz et."
+    user_text = prompt.text if prompt.text else "Bu şəkli analiz et."
     image_b64 = None
     
     if prompt.files:
@@ -63,16 +62,15 @@ if prompt:
     with st.chat_message("user"):
         st.markdown(user_text)
 
-    # --- 5. VISION MƏNTİQİ ---
     with st.chat_message("assistant"):
         placeholder = st.empty()
         full_response = ""
         
         try:
-            # Əgər şəkil varsa, vision formatında göndər
             if image_b64:
+                # Şəkilli sorğu formatı
                 messages = [
-                    {"role": "system", "content": "Sən Abdullahın yaratdığı dahi A-Zəka-san. Şəkli görə bilirsən."},
+                    {"role": "system", "content": "Sən Abdullahın dahi A-Zəka-sısan. Şəkilləri görə bilirsən."},
                     {
                         "role": "user",
                         "content": [
@@ -82,10 +80,11 @@ if prompt:
                     }
                 ]
             else:
+                # Sadə mətn sorğusu
                 messages = [{"role": "system", "content": "Sən Abdullahın dahi A-Zəka-sısan."}] + st.session_state.messages
 
             completion = client.chat.completions.create(
-                model=VISION_MODEL,
+                model=STABLE_VISION_MODEL,
                 messages=messages,
                 stream=True
             )
@@ -100,4 +99,3 @@ if prompt:
             
         except Exception as e:
             st.error(f"Xəta: {str(e)}")
-            st.info("İpucu: Əgər 404 xətası alırsansa, Groq-da bu modelə girişin yoxdur.")
