@@ -14,7 +14,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- 2. BEYİN SİSTEMİ (STABİL KONFİQURASİYA) ---
-GEMINI_API_KEY = "AIzaSyDz-rB4RGABHiz1S9bQ4OutCY61v39b8Eo"
+GEMINI_API_KEY = "AIzaSyBiPhToQs_WMs_qtY_seJxhCEVd2r1Y7yk"
 
 # API-nı ən stabil versiya ilə işə salırıq
 genai.configure(api_key=GEMINI_API_KEY)
