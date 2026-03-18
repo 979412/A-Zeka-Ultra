@@ -17,7 +17,7 @@ st.markdown("""
 
 # --- 2. BEYİN MƏRKƏZİ ---
 # Sənin işlək API açarın
-API_KEY = "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"
+API_KEY = "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"
 client = Groq(api_key=API_KEY)
 
 # DİQQƏT: Şəkil üçün bu model mütləqdir. Əgər bu işləməsə, Groq-da vision icazən yoxdur deməkdir.
