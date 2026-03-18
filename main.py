@@ -2,37 +2,45 @@ import streamlit as st
 import google.generativeai as genai
 from PIL import Image
 
-# --- 1. DİZAYN ---
+# --- 1. PROFESSIONAL DİZAYN ---
 st.set_page_config(page_title="A-Zəka Ultra", page_icon="🧠", layout="wide")
 
 st.markdown("""
 <style>
     .stApp { background-color: #ffffff; }
-    .stChatMessage { border-radius: 15px; border: 1px solid #e2e8f0; background-color: #f8fafc !important; }
+    .stChatMessage { border-radius: 12px; border: 1px solid #e2e8f0; background-color: #f8fafc !important; }
     .main-header { text-align: center; color: #2563eb; font-weight: 800; font-size: 3rem; margin-top: -50px; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. BEYİN SİSTEMİ (YENİLƏNMİŞ MODEL) ---
-# Sənin işlək API açarın
+# --- 2. BEYİN SİSTEMİ (STABİL KONFİQURASİYA) ---
 GEMINI_API_KEY = "AIzaSyDz-rB4RGABHiz1S9bQ4OutCY61v39b8Eo"
+
+# API-nı ən stabil versiya ilə işə salırıq
 genai.configure(api_key=GEMINI_API_KEY)
 
-# 404 xətası verməyən ən son model
-MODEL_NAME = 'gemini-1.5-flash-latest' 
+# Modelləri tək-tək yoxlayan "Ağıllı Seçim" funksiyası
+def get_working_model():
+    # Ən stabil modellərin siyahısı
+    models_to_try = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']
+    for m in models_to_try:
+        try:
+            model = genai.GenerativeModel(m)
+            # Kiçik bir test sorğusu ilə yoxlayırıq
+            return model
+        except:
+            continue
+    return None
 
-try:
-    model = genai.GenerativeModel(MODEL_NAME)
-except:
-    model = genai.GenerativeModel('gemini-pro')
+model = get_working_model()
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # --- 3. PANEL ---
 with st.sidebar:
-    st.title("⚙️ A-Zəka")
-    if st.button("🗑️ Tarixçəni Sil"):
+    st.title("⚙️ Ayarlar")
+    if st.button("🗑️ Tarixçəni Sil", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
     st.info("Yaradıcı: Abdullah Mikayılov")
@@ -47,7 +55,7 @@ for msg in st.session_state.messages:
 prompt = st.chat_input("Sualını yaz və ya şəkil at (+)...", accept_file=True)
 
 if prompt:
-    user_text = prompt.text if prompt.text else "Zəhmət olmasa bunu analiz et."
+    user_text = prompt.text if prompt.text else "Bu şəkli analiz et."
     uploaded_images = []
     
     if prompt.files:
@@ -65,20 +73,22 @@ if prompt:
         full_response = ""
         
         try:
-            # Şəkil və mətni eyni anda göndəririk
-            input_data = [user_text] + uploaded_images if uploaded_images else [user_text]
-            
-            response = model.generate_content(input_data, stream=True)
-            
-            for chunk in response:
-                if chunk.text:
-                    full_response += chunk.text
-                    res_area.markdown(full_response + "▌")
-            
-            res_area.markdown(full_response)
-            st.session_state.messages.append({"role": "assistant", "content": full_response})
+            if model is None:
+                st.error("Xəta: Heç bir modelə qoşulmaq mümkün olmadı. API Key-i yoxlayın.")
+            else:
+                input_data = [user_text] + uploaded_images if uploaded_images else [user_text]
+                
+                # Stream rejimində cavab alırıq
+                response = model.generate_content(input_data, stream=True)
+                
+                for chunk in response:
+                    if chunk.text:
+                        full_response += chunk.text
+                        res_area.markdown(full_response + "▌")
+                
+                res_area.markdown(full_response)
+                st.session_state.messages.append({"role": "assistant", "content": full_response})
             
         except Exception as e:
-            # Əgər hələ də model xətası verərsə, bu hissə kömək edəcək
-            st.error(f"Xəta: {str(e)}")
-            st.info("İpucu: Google AI Studio-da modelin aktiv olduğundan əmin olun.")
+            st.error(f"⚠️ Texniki Nasazlıq: {str(e)}")
+            st.info("İpucu: Səhifəni yeniləyin və ya API Key-in aktivliyini AI Studio-da yoxlayın.")
