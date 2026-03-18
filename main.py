@@ -1,75 +1,92 @@
 import streamlit as st
 from groq import Groq
+from PIL import Image
+import base64
+import io
 
-# --- 1. SƏHİFƏ AYARLARI ---
-st.set_page_config(page_title="A-Zəka Ultra Alim", page_icon="🧠", layout="centered")
+# --- 1. GÜCLÜ VƏ ŞİFFFAF DİZAYN ---
+st.set_page_config(page_title="A-Zəka Ultra", page_icon="🧠", layout="centered")
 
-# --- 2. DİZAYN AYARLARI ---
 st.markdown("""
     <style>
-    .stChatMessage { border-radius: 15px; padding: 10px; border: 1px solid #333; }
+    .stApp { background-color: #f0f2f6; }
+    .stChatMessage { border-radius: 10px; border: 1px solid #d1d5db; background: white !important; }
+    .main-title { color: #1e40af; text-align: center; font-weight: 800; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. BEYİN MƏRKƏZİ (Groq) ---
-try:
-    api_key = st.secrets["GROQ_API_KEY"]
-except:
-    api_key = "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"
+# --- 2. BEYİN MƏRKƏZİ ---
+# Sənin işlək API açarın
+API_KEY = "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"
+client = Groq(api_key=API_KEY)
 
-client = Groq(api_key=api_key)
+# DİQQƏT: Şəkil üçün bu model mütləqdir. Əgər bu işləməsə, Groq-da vision icazən yoxdur deməkdir.
+VISION_MODEL = "llama-3.2-90b-vision-preview" 
+
+def encode_image(image):
+    buffered = io.BytesIO()
+    image.save(buffered, format="JPEG")
+    return base64.b64encode(buffered.getvalue()).decode('utf-8')
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# --- 4. SOL PANEL (Yalnız Tarixçəni Təmizləmək Üçün) ---
+# --- 3. YAN PANEL ---
 with st.sidebar:
-    st.title("⚙️ A-Zəka Ayarları")
-    if st.button("🗑️ Tarixçəni Təmizlə", use_container_width=True):
+    st.markdown("### ⚙️ Ayarlar")
+    if st.button("🗑️ Tarixçəni Sil", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
-    st.markdown("---")
     st.write("Yaradıcı: **Abdullah Mikayılov**")
 
-# --- 5. ƏSAS EKRAN ---
-st.title("🧠 A-Zəka Ultra Alim")
-st.markdown("---")
+st.markdown("<h1 class='main-title'>🧠 A-Zəka Ultra Alim</h1>", unsafe_allow_html=True)
 
 # Mesajları göstər
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# --- 6. SUAL VƏ FAYL GİRİŞİ (YENİ SİSTEM) ---
-# Düyməni birbaşa qutunun içinə əlavə edirik: accept_file=True
-prompt = st.chat_input("Dahi alimə sualını ver...", accept_file=True)
+# --- 4. GİRİŞ (+) ---
+prompt = st.chat_input("Sualını yaz və ya şəkil at (+)...", accept_file=True)
 
-# --- 7. MƏNTİQ ---
 if prompt:
-    # İstifadəçinin yazdığı mətni alırıq (boşdursa, boş sətir qalır)
-    user_text = prompt.text if prompt.text else ""
-    display_content = user_text
+    user_text = prompt.text if prompt.text else "Zəhmət olmasa bu şəkli analiz et."
+    image_b64 = None
     
-    # Əgər qutunun içindəki o düymə vasitəsilə fayl yüklənibsə:
     if prompt.files:
-        for uploaded_file in prompt.files:
-            # Faylın adını da mesaja qoşuruq
-            display_content = f"📎 **Əlavə edilən fayl:** {uploaded_file.name}\n\n" + display_content
+        for f in prompt.files:
+            img = Image.open(f)
+            st.image(img, width=400)
+            image_b64 = encode_image(img)
 
-    # İstifadəçi mesajını ekrana yaz
-    st.session_state.messages.append({"role": "user", "content": display_content})
+    st.session_state.messages.append({"role": "user", "content": user_text})
     with st.chat_message("user"):
-        st.markdown(display_content)
+        st.markdown(user_text)
 
-    # Botun cavabı
+    # --- 5. VISION MƏNTİQİ ---
     with st.chat_message("assistant"):
         placeholder = st.empty()
         full_response = ""
         
         try:
+            # Əgər şəkil varsa, vision formatında göndər
+            if image_b64:
+                messages = [
+                    {"role": "system", "content": "Sən Abdullahın yaratdığı dahi A-Zəka-san. Şəkli görə bilirsən."},
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": user_text},
+                            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_b64}"}}
+                        ]
+                    }
+                ]
+            else:
+                messages = [{"role": "system", "content": "Sən Abdullahın dahi A-Zəka-sısan."}] + st.session_state.messages
+
             completion = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=[{"role": "system", "content": "Sən A-Zəka-san, dahi proqramçı Abdullah Mikayılov tərəfindən yaradılmısan."}] + st.session_state.messages,
+                model=VISION_MODEL,
+                messages=messages,
                 stream=True
             )
             
@@ -82,4 +99,5 @@ if prompt:
             st.session_state.messages.append({"role": "assistant", "content": full_response})
             
         except Exception as e:
-            st.error("Xəta baş verdi! VPN-in işlədiyinə əmin ol.")
+            st.error(f"Xəta: {str(e)}")
+            st.info("İpucu: Əgər 404 xətası alırsansa, Groq-da bu modelə girişin yoxdur.")
