@@ -1,6 +1,7 @@
 import streamlit as st
-import google.generativeai as genai
+from groq import Groq
 from PIL import Image
+import base64
 import io
 
 # --- 1. ULTRA DİZAYN VƏ AYARLAR ---
@@ -48,14 +49,9 @@ with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/8682/8682970.png", width=100)
     st.markdown("### ⚙️ A-Zəka Paneli")
     st.write("Yaradıcı: **Abdullah Mikayılov**")
-    st.write("Güc: **Ultra 10x (Görmə Aktiv)**")
+    st.write("Güc: **Ultra 10x (Groq Beyni)**")
     st.divider()
     
-    # Yeni sistemin işləməsi üçün Google-dan alınan açar lazımdır
-    api_key = st.text_input("🔑 Gemini API Key daxil et:", type="password", help="aistudio.google.com saytından ala bilərsən")
-    
-    st.divider()
-    # Sənin istədiyin tarixçəni sil düyməsi
     if st.button("🗑️ Tarixçəni Təmizlə", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
@@ -63,54 +59,48 @@ with st.sidebar:
 st.markdown("<h1 class='ultra-title'>🔮 A-Zəka Ultra</h1>", unsafe_allow_html=True)
 st.markdown("<div class='sub-title'>Dünyanın ən mürəkkəb suallarını 1 saniyədə həll edən 10x sistem.</div>", unsafe_allow_html=True)
 
-# Açarı yoxlayırıq
-if not api_key:
-    st.warning("⚠️ Zəhmət olmasa sol paneldə **Gemini API Key** daxil edin ki, 10x Ultra beyin aktivləşsin.")
-    st.info("💡 Groq-un şəkil modelləri silindiyi üçün biz ölməyən və 10 qat daha güclü sistemə keçdik. Açar almaq pulsuzdur: https://aistudio.google.com/app/apikey")
-    st.stop()
+# --- GROQ API KEY ELAVE EDİLDİ ---
+GROQ_API_KEY = "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"
+client = Groq(api_key=GROQ_API_KEY)
 
-# Dünyanın ən güclü modeli qoşulur
-genai.configure(api_key=api_key)
-# gemini-1.5-pro həm şəkil oxuyur, həm də riyaziyyatı mükəmməl həll edir
-model = genai.GenerativeModel('gemini-1.5-pro')
+# Ən stabil vizual analiz modeli
+MODEL_NAME = "llama-3.2-11b-vision-preview"
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# --- 3. SÖHBƏT VƏ ŞƏKİL ANALİZİ ---
+# --- 3. FUNKSİYALAR ---
+def encode_image(image):
+    buffered = io.BytesIO()
+    if image.mode != 'RGB': image = image.convert('RGB')
+    image.save(buffered, format="JPEG")
+    return base64.b64encode(buffered.getvalue()).decode('utf-8')
+
+# Söhbət tarixçəsini göstər
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# Sənin istədiyin + düyməli mesaj yeri
+# + Düyməli mesaj yeri
 prompt = st.chat_input("Mürəkkəb sualını yaz və ya şəkil yüklə (+)...", accept_file=True)
 
 if prompt:
-    user_message = prompt.text if prompt.text else "Zəhmət olmasa bu şəkli detallı analiz et və həllini yaz."
+    user_message = prompt.text if prompt.text else "Zəhmət olmasa bu şəkli detallı analiz et."
     
     with st.chat_message("user"):
         st.markdown(user_message)
 
-    # A-Zəka-ya kim olduğunu xatırladırıq və məsələləri düzgün yazmasını əmr edirik
-    system_instruction = "Sən Abdullah Mikayılov tərəfindən yaradılmış, dünyanın ən güclü süni intellekti A-Zəka-san. Riyazi sualları və düsturları mütləq LaTeX ($...$) formatında aydın və addım-addım yaz."
+    # A-Zəka Sistem Təlimatı
+    system_instruction = "Sən Abdullah Mikayılov tərəfindən yaradılmış, dünyanın en güclü süni intellekti A-Zəka-san. Riyazi sualları mütləq LaTeX ($...$) formatında addım-addım həll et."
     
-    content_to_send = [system_instruction, user_message]
+    content_list = [{"type": "text", "text": user_message}]
     
-    # Əgər şəkil varsa (sənin istədiyin kimi)
+    # Şəkil yüklənibsə emal et
     if prompt.files:
         for f in prompt.files:
             img = Image.open(f)
-            st.image(img, width=350, caption="📷 Şəkil A-Zəka beyninə ötürüldü...")
-            content_to_send.append(img)
-
-    with st.chat_message("assistant"):
-        with st.spinner("A-Zəka Ultra 10x analiz edir..."):
-            try:
-                response = model.generate_content(content_to_send)
-                st.markdown(response.text)
-                
-                # Tarixçəyə yazmaq
-                st.session_state.messages.append({"role": "user", "content": user_message})
-                st.session_state.messages.append({"role": "assistant", "content": response.text})
-            except Exception as e:
-                st.error(f"Xəta baş verdi: {str(e)}")
+            st.image(img, width=350, caption="📷 Şəkil analizə hazırlandı...")
+            base64_image = encode_image(img)
+            content_list.append({
+                "type": "image_url",
+                "image_url
