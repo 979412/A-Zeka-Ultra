@@ -4,40 +4,38 @@ from PIL import Image
 import base64
 import io
 
-# --- 1. PREMİUM VİSUAL AYARLAR ---
-st.set_page_config(page_title="A-Zəka Ultra", page_icon="🔮", layout="wide")
+# --- 1. PROFESSIONAL VƏ TƏMİZ DİZAYN ---
+st.set_page_config(page_title="A-Zəka Ultra", page_icon="🧠", layout="wide")
 
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
     .stApp { background-color: #ffffff; color: #1e293b; font-family: 'Inter', sans-serif; }
     
     /* Mesaj Balonları */
-    .stChatMessage { border-radius: 15px; border: 1px solid #e2e8f0; padding: 15px; margin-bottom: 10px; }
+    .stChatMessage { border-radius: 12px; border: 1px solid #e2e8f0; background-color: #f8fafc !important; margin-bottom: 10px; }
+    
+    /* Başlıq */
+    .main-header { text-align: center; color: #2563eb; font-weight: 800; font-size: 3rem; margin-bottom: 0px; }
+    .sub-header { text-align: center; color: #64748b; font-size: 1.1rem; margin-bottom: 30px; }
     
     /* Yan Panel */
     [data-testid="stSidebar"] { background-color: #f1f5f9 !important; border-right: 1px solid #e2e8f0; }
-    
-    /* Başlıq */
-    .ultra-title { color: #2563eb; text-align: center; font-size: 3rem; font-weight: 800; margin-bottom: 0px; }
+    .stButton>button { width: 100%; border-radius: 8px; background-color: #ef4444; color: white; border: none; font-weight: 600; }
 </style>
 """, unsafe_allow_html=True)
 
 # --- 2. BEYİN KONFİQURASİYASI ---
-# ƏGƏR BU AÇAR İŞLƏMƏSƏ, YENİSİNİ BURA YAPIŞDIR
-API_KEY = "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"
+# Sənin yeni açarın bura daxil edildi
+API_KEY = "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"
+client = Groq(api_key=API_KEY)
 
-def get_client():
-    try:
-        return Groq(api_key=API_KEY)
-    except:
-        return None
-
-client = get_client()
-STABLE_MODEL = "llama-3.2-11b-vision-preview" # Həm şəkil, həm mətn üçün ən stabil model
+# Həm şəkil, həm mətn üçün ən stabil model
+MODEL_NAME = "llama-3.2-11b-vision-preview"
 
 def encode_image(image):
     buffered = io.BytesIO()
+    if image.mode != 'RGB': image = image.convert('RGB')
     image.save(buffered, format="JPEG")
     return base64.b64encode(buffered.getvalue()).decode('utf-8')
 
@@ -53,40 +51,43 @@ with st.sidebar:
         st.rerun()
 
 # --- 4. ƏSAS EKRAN ---
-st.markdown("<h1 class='ultra-title'>A-Zəka Ultra</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; color:#64748b;'>Dahi Abdullah tərəfindən idarə olunan 10x sistem.</p>", unsafe_allow_html=True)
+st.markdown("<h1 class='main-header'>A-Zəka Ultra</h1>", unsafe_allow_html=True)
+st.markdown("<p class='sub-header'>Abdullah Mikayılov tərəfindən yaradılmış 10x dahi sistem.</p>", unsafe_allow_html=True)
 
 # Tarixçəni göstər
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# --- 5. GİRİŞ VƏ MƏNTİQ ---
+# --- 5. ULTRA GİRİŞ SİSTEMİ (+) ---
+# accept_file=True sayəsində şəkil yükləmə düyməsi aktivdir
 prompt = st.chat_input("Sualını yaz və ya şəkil at (+)...", accept_file=True)
 
 if prompt:
-    user_text = prompt.text if prompt.text else "Bu şəkli analiz et."
+    user_text = prompt.text if prompt.text else "Zəhmət olmasa bu şəkli analiz et."
     image_b64 = None
     
+    # Şəkil yüklənibsə onu emal et
     if prompt.files:
         for f in prompt.files:
             img = Image.open(f)
-            st.image(img, width=400)
+            st.image(img, width=400, caption="Yüklənən şəkil")
             image_b64 = encode_image(img)
 
     st.session_state.messages.append({"role": "user", "content": user_text})
     with st.chat_message("user"):
         st.markdown(user_text)
 
+    # A-Zəka-nın cavabı
     with st.chat_message("assistant"):
         placeholder = st.empty()
         full_response = ""
         
         try:
-            # Şəkilli və ya mətni sorğu formatı
             if image_b64:
+                # Şəkilli sorğu formatı
                 messages = [
-                    {"role": "system", "content": "Sən Abdullahın dahi A-Zəka-sısan. Şəkilləri dərindən analiz edirsən."},
+                    {"role": "system", "content": "Sən dahi A-Zəka-san. Şəkilləri görürsən və Abdullahın köməkçisisən."},
                     {
                         "role": "user",
                         "content": [
@@ -96,10 +97,11 @@ if prompt:
                     }
                 ]
             else:
-                messages = [{"role": "system", "content": "Sən Abdullahın dahi A-Zəka-sısan."}] + st.session_state.messages
+                # Sadə mətn sorğusu
+                messages = [{"role": "system", "content": "Sən dahi A-Zəka-san."}] + st.session_state.messages
 
             completion = client.chat.completions.create(
-                model=STABLE_MODEL,
+                model=MODEL_NAME,
                 messages=messages,
                 stream=True
             )
@@ -113,7 +115,4 @@ if prompt:
             st.session_state.messages.append({"role": "assistant", "content": full_response})
             
         except Exception as e:
-            if "401" in str(e):
-                st.error("❌ Xəta: API Key səhvdir və ya ləğv edilib. Lütfən yeni bir API Key daxil edin.")
-            else:
-                st.error(f"⚠️ Texniki xəta: {str(e)}")
+            st.error(f"Xəta baş verdi: {str(e)}")
