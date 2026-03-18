@@ -13,7 +13,7 @@ SYSTEM_INSTRUCTION = (
 
 # --- 2. BEYİN QOŞULMASI ---
 # DİQQƏT: Buradakı açarı Google AI Studio-dan (aistudio.google.com) aldığın açarla əvəz et.
-API_KEY = "BURAYA_GOOGLE_API_KEY_YAZIN" 
+API_KEY = "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" 
 genai.configure(api_key=API_KEY)
 
 model = genai.GenerativeModel(
