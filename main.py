@@ -10,18 +10,19 @@ st.set_page_config(page_title="A-Zəka Ultra", page_icon="🧠", layout="wide")
 st.markdown("""
 <style>
     .stApp { background-color: #ffffff; }
-    .stChatMessage { border-radius: 15px; border: 1px solid #eee; margin-bottom: 10px; }
-    .main-title { color: #2563eb; text-align: center; font-weight: 800; font-size: 3rem; }
+    .stChatMessage { border-radius: 15px; border: 1px solid #e2e8f0; margin-bottom: 10px; background-color: #f8fafc !important; }
+    .main-title { color: #1d4ed8; text-align: center; font-weight: 800; font-size: 3rem; margin-top: -50px; }
+    .stChatInputContainer { border-top: 1px solid #eee !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. BEYİN MƏRKƏZİ ---
+# --- 2. BEYİN ---
 API_KEY = "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"
 client = Groq(api_key=API_KEY)
 
-# Yoxlanılacaq modellərin siyahısı (Groq-un silmə ehtimalına qarşı)
-VISION_MODELS = ["llama-3.2-11b-vision-preview", "llama-3.2-90b-vision-preview", "llama-3.3-70b-specdec"]
-TEXT_MODEL = "llama-3.3-70b-versatility"
+# Modellər
+TEXT_MODEL = "llama-3.3-70b-versatile"
+VISION_MODEL = "llama-3.2-11b-vision-preview"
 
 def encode_image(image):
     buffered = io.BytesIO()
@@ -34,15 +35,15 @@ if "messages" not in st.session_state:
 
 # --- 3. PANEL ---
 with st.sidebar:
-    st.title("⚙️ A-Zəka Ayarları")
-    if st.button("🗑️ Tarixçəni Sil"):
+    st.title("⚙️ A-Zəka")
+    if st.button("🗑️ Tarixçəni Sil", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
     st.info("Yaradıcı: Abdullah Mikayılov")
 
 st.markdown("<h1 class='main-title'>A-Zəka Ultra</h1>", unsafe_allow_html=True)
 
-# --- 4. ÇAT MƏNTİQİ ---
+# --- 4. ÇAT ---
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
@@ -50,7 +51,7 @@ for msg in st.session_state.messages:
 prompt = st.chat_input("Sualını yaz və ya şəkil at (+)...", accept_file=True)
 
 if prompt:
-    user_text = prompt.text if prompt.text else "Zəhmət olmasa bunu analiz et."
+    user_text = prompt.text if prompt.text else ""
     img_b64 = None
     
     if prompt.files:
@@ -59,48 +60,52 @@ if prompt:
             st.image(img, width=400)
             img_b64 = encode_image(img)
 
-    st.session_state.messages.append({"role": "user", "content": user_text})
+    # Ekranda göstəriləcək mesaj
+    display_msg = user_text if not img_b64 else f"🖼️ [Şəkil yükləndi] {user_text}"
+    st.session_state.messages.append({"role": "user", "content": display_msg})
+    
     with st.chat_message("user"):
-        st.markdown(user_text)
+        st.markdown(display_msg)
 
     with st.chat_message("assistant"):
         res_area = st.empty()
         full_res = ""
         
-        # MƏSULİYYƏTLİ MODEL SEÇİMİ
-        success = False
-        
-        # Əgər şəkil varsa, vision modellərini tək-tək yoxla
-        models_to_try = VISION_MODELS if img_b64 else [TEXT_MODEL]
-        
-        for model_name in models_to_try:
-            try:
-                if img_b64:
-                    msgs = [
-                        {"role": "system", "content": "Sən dahi A-Zəka-san. Şəkilləri görürsən."},
-                        {"role": "user", "content": [
+        try:
+            # Əgər şəkil varsa VİSİON yoxla, yoxdursa birbaşa MƏTN
+            if img_b64:
+                try:
+                    completion = client.chat.completions.create(
+                        model=VISION_MODEL,
+                        messages=[{"role": "user", "content": [
                             {"type": "text", "text": user_text},
                             {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}}
-                        ]}
-                    ]
-                else:
-                    msgs = [{"role": "system", "content": "Sən A-Zəka-san."}] + st.session_state.messages
-
+                        ]}],
+                        stream=True
+                    )
+                except:
+                    # Vision xəta verərsə avtomatik mətnə keç
+                    st.warning("⚠️ Groq Vision hazırda aktiv deyil. Şəkil analiz edilə bilmədi, amma sualına cavab verirəm:")
+                    completion = client.chat.completions.create(
+                        model=TEXT_MODEL,
+                        messages=[{"role": "user", "content": user_text}],
+                        stream=True
+                    )
+            else:
                 completion = client.chat.completions.create(
-                    model=model_name, messages=msgs, stream=True
+                    model=TEXT_MODEL,
+                    messages=[{"role": "system", "content": "Sən A-Zəka-san, Abdullah tərəfindən yaradılmısan."}] + \
+                             [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages[-5:]],
+                    stream=True
                 )
-                
-                for chunk in completion:
-                    if chunk.choices[0].delta.content:
-                        full_res += chunk.choices[0].delta.content
-                        res_area.markdown(full_res + "▌")
-                
-                res_area.markdown(full_res)
-                st.session_state.messages.append({"role": "assistant", "content": full_res})
-                success = True
-                break # Uğurlu oldusa, digər modelləri yoxlama
-            except Exception as e:
-                continue # Xəta verdisə, növbəti modeli yoxla
-        
-        if not success:
-            st.error("❌ Groq hazırda bütün vision modellərini bağlayıb. Lütfən bir neçə dəqiqə sonra yoxla və ya yalnız mətn yaz.")
+            
+            for chunk in completion:
+                if chunk.choices[0].delta.content:
+                    full_res += chunk.choices[0].delta.content
+                    res_area.markdown(full_res + "▌")
+            
+            res_area.markdown(full_res)
+            st.session_state.messages.append({"role": "assistant", "content": full_res})
+            
+        except Exception as e:
+            st.error("Bağışla Abdullah, sistemdə texniki nasazlıq var. Bir az sonra yoxla.")
