@@ -15,7 +15,7 @@ st.markdown("""
 try:
     api_key = st.secrets["GROQ_API_KEY"]
 except:
-    api_key = "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"
+    api_key = "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"
 
 client = Groq(api_key=api_key)
 
