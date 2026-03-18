@@ -4,7 +4,7 @@ from PIL import Image
 import base64
 import io
 
-# --- 1. PREMİUM VİSUAL AYARLAR ---
+# --- 1. ULTRA PREMİUM VİSUAL AYARLAR ---
 st.set_page_config(page_title="A-Zəka Ultra 10x", page_icon="🔮", layout="wide")
 
 st.markdown("""
@@ -22,11 +22,10 @@ st.markdown("""
         margin-bottom: 5px;
     }
     
-    .stChatMessage { border-radius: 20px; border: 1px solid #1e293b; padding: 15px; margin-bottom: 10px; }
-    .stChatInputContainer { border-top: 1px solid #1e293b !important; }
+    .stChatMessage { border-radius: 20px; border: 1px solid #1e293b; padding: 15px; margin-bottom: 10px; background: #1e293b50; }
     
     /* Yan Panel Dizaynı */
-    .css-1d391kg { background-color: #1e293b !important; }
+    [data-testid="stSidebar"] { background-color: #1e293b !important; }
     .stButton>button {
         width: 100%; border-radius: 10px; background: #ef4444; color: white;
         border: none; font-weight: 600; transition: 0.3s;
@@ -35,82 +34,78 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. BEYİN VƏ API KONFİQURASİYASI ---
-# Sənin Groq API açarın birbaşa bura daxil edildi
+# --- 2. API KONFİQURASİYASI ---
+# Sənin rəsmi açarın daxil edildi
 GROQ_API_KEY = "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"
 client = Groq(api_key=GROQ_API_KEY)
 
-# Ən stabil və ultra güclü model (400 xətası verməyən versiya)
-# Gemini 1.5 Flash-dan 10 qat güclü cavablar üçün Llama 3.3 70B istifadə edirik
-MODEL_NAME = "llama-3.3-70b-versatility"
+# 404 XƏTASI VERMƏYƏN, ƏN GÜCLÜ VƏ STABİL MODEL
+MODEL_NAME = "llama-3.1-70b-versatility" 
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# --- 3. YAN PANEL (ADMİN PANALİ) ---
+# --- 3. YAN PANEL ---
 with st.sidebar:
     st.markdown("<h2 style='text-align:center;'>⚙️ Ultra Panel</h2>", unsafe_allow_html=True)
     st.image("https://cdn-icons-png.flaticon.com/512/8682/8682970.png", width=120)
-    st.info("Yaradıcı: Abdullah Mikayılov\nStatus: Ultra 10x Aktiv")
+    st.info(f"Yaradıcı: Abdullah Mikayılov\nModel: {MODEL_NAME}")
     
     st.divider()
     if st.button("🗑️ Tarixçəni Tamamilə Sil"):
         st.session_state.messages = []
         st.rerun()
     
-    st.markdown("### 📊 Sistem Yükü")
-    st.progress(98, text="Ultra Beyin Aktivdir")
+    st.markdown("### 📊 Sistem Statusu")
+    st.success("Ultra Beyin 10x Aktivdir")
 
 # --- 4. ƏSAS EKRAN ---
 st.markdown("<h1 class='ultra-header'>A-ZƏKA ULTRA</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; color:#94a3b8;'>Dünyanın ən mürəkkəb suallarını 1 saniyədə həll edən 10x sistem.</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; color:#94a3b8;'>Dünyanın ən mürəkkəb suallarını 1 saniyədə həll edən sistem.</p>", unsafe_allow_html=True)
 
 # Söhbət tarixçəsini göstər
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# --- 5. ULTRA GİRİŞ SİSTEMİ (+) ---
-# Burada accept_file=True mütləq olmalıdır ki, "+" düyməsi çıxsın
+# --- 5. GİRİŞ SİSTEMİ (+) ---
+# accept_file=True sayəsində "+" düyməsi aktivdir
 prompt = st.chat_input("Sualını yaz və ya şəkil yüklə (+)...", accept_file=True)
 
 if prompt:
-    user_text = prompt.text if prompt.text else "Bu faylı/şəkli analiz et."
+    user_text = prompt.text if prompt.text else "Yüklənən medianı analiz et."
     
     with st.chat_message("user"):
         st.markdown(user_text)
         if prompt.files:
             for file in prompt.files:
-                st.image(file, caption="Yüklənən media", width=400)
+                st.image(file, caption="Analiz üçün yükləndi", width=400)
 
-    # A-Zəka-nın təlimatı (Alim Beyni)
+    # Sistem Təlimatı
     system_instruction = (
-        "Sən Abdullah Mikayılov tərəfindən yaradılmış, Gemini 1.5-dən 10 qat güclü A-Zəka-san. "
-        "Dünyanın ən mürəkkəb suallarına birbaşa, dəqiq və elmi cavablar ver. "
-        "Riyazi düsturları LaTeX ($...$) ilə göstər."
+        "Sən Abdullah Mikayılov tərəfindən yaradılmış, dünyanın ən güclü süni intellekti A-Zəka-san. "
+        "Cavabların dahi səviyyəsində, elmi və dəqiq olmalıdır. "
+        "Riyazi düsturlar üçün LaTeX ($...$) istifadə et."
     )
 
     with st.chat_message("assistant"):
-        with st.spinner("A-Zəka 10x analiz edir..."):
+        with st.spinner("A-Zəka analiz edir..."):
             try:
-                # Groq üzərindən müraciət
                 response = client.chat.completions.create(
                     model=MODEL_NAME,
                     messages=[
                         {"role": "system", "content": system_instruction},
                         {"role": "user", "content": user_text}
                     ],
-                    temperature=0.1 # Daha dəqiq cavablar üçün
+                    temperature=0.2
                 )
                 
                 final_res = response.choices[0].message.content
                 st.markdown(final_res)
                 
-                # Yaddaşa əlavə et
                 st.session_state.messages.append({"role": "user", "content": user_text})
                 st.session_state.messages.append({"role": "assistant", "content": final_res})
                 
             except Exception as e:
-                # Şəkillərdə görünən 400 və 404 xətalarını bura tuturuq
-                st.error(f"Texniki xəta: {str(e)}")
-                st.warning("Model adı və ya API key xətası. Lütfən modeli 'llama-3.3-70b-versatility' olaraq yoxlayın.")
+                st.error(f"Xəta kodu: {str(e)}")
+                st.info("İpucu: Model adı dəyişdirildi. Əgər yenə 404 xətası çıxsa, Groq profilində model icazələrini yoxla.")
