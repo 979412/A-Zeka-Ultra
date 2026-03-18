@@ -1,111 +1,100 @@
 import streamlit as st
-from groq import Groq
+import google.generativeai as genai
 from PIL import Image
-import base64
-import io
 
-# --- 1. ULTRA PREMİUM VİSUAL AYARLAR ---
-st.set_page_config(page_title="A-Zəka Ultra 10x", page_icon="🔮", layout="wide")
+# --- 1. PROFESSIONAL VƏ İŞIQLI DİZAYN ---
+st.set_page_config(page_title="A-Zəka Ultra", page_icon="🧠", layout="wide")
 
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600&display=swap');
+    .stApp { background-color: #ffffff; color: #1e293b; }
     
-    .stApp { background: #0f172a; color: #f8fafc; font-family: 'Inter', sans-serif; }
-    
-    .ultra-header {
-        font-family: 'Orbitron', sans-serif;
-        background: linear-gradient(90deg, #38bdf8, #818cf8, #c084fc);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        text-align: center; font-size: 4rem; font-weight: 700;
-        margin-bottom: 5px;
+    /* Başlıq Dizaynı */
+    .main-header {
+        text-align: center;
+        color: #2563eb;
+        font-size: 3.5rem;
+        font-weight: 800;
+        margin-bottom: 0px;
     }
+    .sub-text { text-align: center; color: #64748b; font-size: 1.1rem; margin-bottom: 30px; }
     
-    .stChatMessage { border-radius: 20px; border: 1px solid #1e293b; padding: 15px; margin-bottom: 10px; background: #1e293b50; }
+    /* Çat Mesajları */
+    .stChatMessage { border-radius: 12px; border: 1px solid #e2e8f0; background-color: #f8fafc !important; }
     
-    /* Yan Panel Dizaynı */
-    [data-testid="stSidebar"] { background-color: #1e293b !important; }
+    /* Yan Panel */
+    [data-testid="stSidebar"] { background-color: #f1f5f9 !important; border-right: 1px solid #e2e8f0; }
+    
+    /* Düymələr */
     .stButton>button {
-        width: 100%; border-radius: 10px; background: #ef4444; color: white;
-        border: none; font-weight: 600; transition: 0.3s;
+        width: 100%; border-radius: 8px; background-color: #ef4444; color: white;
+        border: none; padding: 10px; font-weight: 600;
     }
-    .stButton>button:hover { background: #dc2626; transform: scale(1.02); }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. API KONFİQURASİYASI ---
-# Sənin rəsmi açarın daxil edildi
-GROQ_API_KEY = "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"
-client = Groq(api_key=GROQ_API_KEY)
+# --- 2. AYARLAR VƏ BEYİN ---
+with st.sidebar:
+    st.markdown("<h2 style='text-align:center;'>⚙️ Ayarlar</h2>", unsafe_allow_html=True)
+    st.image("https://cdn-icons-png.flaticon.com/512/4712/4712035.png", width=100)
+    st.info("Yaradıcı: Abdullah Mikayılov")
+    
+    # Bura öz Gemini API Key-ni daxil et
+    api_key = st.text_input("🔑 Gemini API Key:", type="password")
+    
+    st.divider()
+    if st.button("🗑️ Tarixçəni Təmizlə"):
+        st.session_state.messages = []
+        st.rerun()
 
-# 404 XƏTASI VERMƏYƏN, ƏN GÜCLÜ VƏ STABİL MODEL
-MODEL_NAME = "llama-3.1-70b-versatility" 
+# Beyini işə sal
+if api_key:
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel('gemini-1.5-flash')
+else:
+    st.warning("⚠️ Davam etmək üçün sol panelə Gemini API Key daxil edin.")
+    st.stop()
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# --- 3. YAN PANEL ---
-with st.sidebar:
-    st.markdown("<h2 style='text-align:center;'>⚙️ Ultra Panel</h2>", unsafe_allow_html=True)
-    st.image("https://cdn-icons-png.flaticon.com/512/8682/8682970.png", width=120)
-    st.info(f"Yaradıcı: Abdullah Mikayılov\nModel: {MODEL_NAME}")
-    
-    st.divider()
-    if st.button("🗑️ Tarixçəni Tamamilə Sil"):
-        st.session_state.messages = []
-        st.rerun()
-    
-    st.markdown("### 📊 Sistem Statusu")
-    st.success("Ultra Beyin 10x Aktivdir")
+# --- 3. ƏSAS EKRAN ---
+st.markdown("<h1 class='main-header'>A-Zəka Ultra</h1>", unsafe_allow_html=True)
+st.markdown("<p class='sub-text'>Dahi Abdullah Mikayılov tərəfindən idarə olunan 10x zəka.</p>", unsafe_allow_html=True)
 
-# --- 4. ƏSAS EKRAN ---
-st.markdown("<h1 class='ultra-header'>A-ZƏKA ULTRA</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; color:#94a3b8;'>Dünyanın ən mürəkkəb suallarını 1 saniyədə həll edən sistem.</p>", unsafe_allow_html=True)
-
-# Söhbət tarixçəsini göstər
+# Tarixçəni göstər
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# --- 5. GİRİŞ SİSTEMİ (+) ---
-# accept_file=True sayəsində "+" düyməsi aktivdir
-prompt = st.chat_input("Sualını yaz və ya şəkil yüklə (+)...", accept_file=True)
+# --- 4. GİRİŞ VƏ "+" DÜYMƏSİ ---
+# accept_file=True mütləqdir ki, "+" düyməsi görünsün
+prompt = st.chat_input("Sualını yaz və ya şəkil at (+)...", accept_file=True)
 
 if prompt:
-    user_text = prompt.text if prompt.text else "Yüklənən medianı analiz et."
+    user_text = prompt.text if prompt.text else "Bu şəkli analiz et."
     
     with st.chat_message("user"):
         st.markdown(user_text)
         if prompt.files:
-            for file in prompt.files:
-                st.image(file, caption="Analiz üçün yükləndi", width=400)
-
-    # Sistem Təlimatı
-    system_instruction = (
-        "Sən Abdullah Mikayılov tərəfindən yaradılmış, dünyanın ən güclü süni intellekti A-Zəka-san. "
-        "Cavabların dahi səviyyəsində, elmi və dəqiq olmalıdır. "
-        "Riyazi düsturlar üçün LaTeX ($...$) istifadə et."
-    )
+            for f in prompt.files:
+                img = Image.open(f)
+                st.image(img, width=400)
 
     with st.chat_message("assistant"):
-        with st.spinner("A-Zəka analiz edir..."):
+        with st.spinner("A-Zəka düşünür..."):
             try:
-                response = client.chat.completions.create(
-                    model=MODEL_NAME,
-                    messages=[
-                        {"role": "system", "content": system_instruction},
-                        {"role": "user", "content": user_text}
-                    ],
-                    temperature=0.2
-                )
+                # Mətn və şəkli eyni anda göndəririk
+                content_to_send = [user_text]
+                if prompt.files:
+                    for f in prompt.files:
+                        content_to_send.append(Image.open(f))
                 
-                final_res = response.choices[0].message.content
-                st.markdown(final_res)
+                response = model.generate_content(content_to_send)
+                res_text = response.text
+                st.markdown(res_text)
                 
                 st.session_state.messages.append({"role": "user", "content": user_text})
-                st.session_state.messages.append({"role": "assistant", "content": final_res})
-                
+                st.session_state.messages.append({"role": "assistant", "content": res_text})
             except Exception as e:
-                st.error(f"Xəta kodu: {str(e)}")
-                st.info("İpucu: Model adı dəyişdirildi. Əgər yenə 404 xətası çıxsa, Groq profilində model icazələrini yoxla.")
+                st.error(f"Xəta: {str(e)}")
