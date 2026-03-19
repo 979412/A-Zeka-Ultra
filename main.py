@@ -33,20 +33,21 @@ def apply_premium_design():
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 3. MOTORUN QURAŞDIRILMASI (SƏHVSİZ REJİM)
+# 3. MOTORUN QURAŞDIRILMASI
 # ==========================================
 def setup_ai_engine():
-    API_KEY = "AIzaSyDCZOA_i6weUCMht1r-VowZvdpv7y-ct_E" # Sənin API açarın
+    # DİQQƏT: Bura yeni aldığın API açarını qoymalısan!
+    API_KEY = "AIzaSyDCZOA_i6weUCMht1r-VowZvdpv7y-ct_E" 
     genai.configure(api_key=API_KEY)
     
-    # Modelləri növbə ilə yoxlayırıq ki, xəta verməsin
+    # Modelləri yoxla
     for model_name in ['gemini-1.5-flash', 'gemini-pro']:
         try:
             model = genai.GenerativeModel(
                 model_name=model_name,
                 system_instruction=A_ZEKA_BEYNI
             )
-            # Test üçün balaca bir sorğu göndəririk
+            # Motorun işlədiyini test et
             model.generate_content("test")
             return model, model_name
         except:
@@ -78,7 +79,7 @@ def main():
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
-            if "images" in msg:
+            if "images" in msg and msg["images"]:
                 for img in msg["images"]:
                     st.image(img, width=250)
 
@@ -93,19 +94,21 @@ def main():
         
         with st.chat_message("user"):
             st.markdown(user_text)
-            for i in uploaded_imgs: st.image(i, width=300)
+            for i in uploaded_imgs:
+                st.image(i, width=300)
 
         with st.chat_message("assistant"):
             res_placeholder = st.empty()
             full_res = ""
             
             if engine is None:
-                full_res = "Xəta: API açarı və ya internet bağlantısı problemi. Zəhmət olmasa API açarını yoxla."
+                full_res = "Sistem qoşulmadı. İnterneti və ya API açarını yoxla."
                 res_placeholder.error(full_res)
             else:
                 try:
-                    # Şəkil varsa Vision rejimini aktiv et
+                    # Modelə göndəriləcək data
                     input_data = [user_text] + uploaded_imgs if uploaded_imgs else [user_text]
+                    
                     response = engine.generate_content(input_data, stream=True)
                     
                     for chunk in response:
@@ -114,8 +117,9 @@ def main():
                             res_placeholder.markdown(full_res + "▌")
                     res_placeholder.markdown(full_res)
                 except Exception as e:
-                    full_res = f"Server xətası: {str(e)}"
-                    res_placeholder.warning("Bağlantı kəsildi. Yenidən yoxla.")
+                    # Əgər API limiti dolubsa və ya başqa xəta varsa
+                    full_res = "Hazırda Google-un bütün beyinləri məşğuldur. Zəhmət olmasa 10 saniyə sonra yenidən cəhd et."
+                    res_placeholder.warning(full_res)
             
             st.session_state.messages.append({"role": "assistant", "content": full_res})
 
