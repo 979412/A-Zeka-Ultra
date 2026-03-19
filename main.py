@@ -99,5 +99,3 @@ if prompt:
             except Exception:
                 continue # 404 və ya aktivlik xətası olsa, növbəti modeli yoxla
         
-        if not success:
-            st.error("⚠️ Google serverləri bu açarı hələ tam tanımayıb. Zəhmət olmasa 2-3 dəqiqə gözləyib yenidən yazın.")
