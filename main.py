@@ -2,7 +2,7 @@ import streamlit as st
 import google.generativeai as genai
 from PIL import Image
 
-# --- 1. DİZAYN ---
+# --- 1. PRO DİZAYN ---
 st.set_page_config(page_title="A-Zəka Ultra", page_icon="🧠", layout="wide")
 
 st.markdown("""
@@ -14,29 +14,29 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. BEYİN SİSTEMİ (İNADKAR REJİM) ---
+# --- 2. AYARLAR VƏ KEY ---
 API_KEY = "AIzaSyDCZOA_i6weUCMht1r-VowZvdpv7y-ct_E"
 genai.configure(api_key=API_KEY)
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# --- 3. PANEL ---
+# --- 3. YAN PANEL ---
 with st.sidebar:
     st.markdown("<h2 style='text-align:center;'>⚙️ Panel</h2>", unsafe_allow_html=True)
-    st.info(f"Yaradıcı: Abdullah Mikayılov\nStatus: Aktiv")
+    st.info("Yaradıcı: Abdullah Mikayılov\nStatus: Sistem Hazırdır")
     if st.button("🗑️ Tarixçəni Təmizlə", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
 
 st.markdown("<h1 class='main-title'>🧠 A-Zəka Ultra</h1>", unsafe_allow_html=True)
 
-# Çat tarixçəsi
+# Tarixçəni göstər
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# --- 4. GİRİŞ VƏ ÇOXLU MODEL YOXLANIŞI ---
+# --- 4. GİRİŞ VƏ MƏNTİQ ---
 prompt = st.chat_input("Sualını yaz və ya şəkil at (+)...", accept_file=True)
 
 if prompt:
@@ -56,15 +56,14 @@ if prompt:
         res_area = st.empty()
         full_res = ""
         
-        # BURA DİQQƏT: Əgər biri işləməsə, o birini yoxlayır
-        models_to_try = ['gemini-1.5-flash', 'gemini-pro']
+        # Bu siyahıdakı modelləri tək-tək sınaqdan keçirir
+        models_to_try = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']
         success = False
         
         for m_name in models_to_try:
             try:
                 model = genai.GenerativeModel(m_name)
                 input_data = [user_text] + imgs if imgs else [user_text]
-                
                 response = model.generate_content(input_data, stream=True)
                 
                 for chunk in response:
@@ -75,15 +74,9 @@ if prompt:
                 res_area.markdown(full_res)
                 st.session_state.messages.append({"role": "assistant", "content": full_res})
                 success = True
-                break # Uğurlu oldusa, dövrədən çıx
-                
-            except Exception as e:
-                # 404 xətası olsa, səssizcə növbəti modeli yoxla
-                if "404" in str(e) or "not found" in str(e).lower():
-                    continue
-                else:
-                    st.error(f"Xəta: {str(e)}")
-                    break
+                break
+            except Exception:
+                continue # Əgər 404 xətası verərsə, növbəti modelə keçir
         
         if not success:
-            st.error("⚠️ Təəssüf ki, Google hələ də bu API açarı üçün modelləri tam aktivləşdirməyib. 5 dəqiqə gözləyib yenidən yoxlayın.")
+            st.error("Google serverləri hələ də API-nı aktivləşdirməyib. Zəhmət olmasa 10 dəqiqə sonra səhifəni yeniləyin.")
