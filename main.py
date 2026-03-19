@@ -1,101 +1,82 @@
 import streamlit as st
 import google.generativeai as genai
 from PIL import Image
-import time
 
-# --- 1. ULTRA MODERN DİZAYN ---
+# --- 1. ULTRA MODERN İNTERFEYS ---
 st.set_page_config(page_title="A-Zəka Ultra", page_icon="🧠", layout="wide")
 
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
-    
-    * { font-family: 'Inter', sans-serif; }
-    .stApp { background: linear-gradient(180deg, #f8fafc 0%, #eff6ff 100%); }
-    
-    /* Başlıq Dizaynı */
+    .stApp { background: white; }
     .main-title { 
-        background: -webkit-linear-gradient(#2563eb, #7c3aed);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        text-align: center; font-weight: 800; font-size: 3.5rem; 
-        margin-bottom: 0.5rem; margin-top: -60px;
+        color: #2563eb; text-align: center; font-weight: 900; 
+        font-size: 3.5rem; margin-top: -60px;
     }
-    
-    /* Mesaj qutuları */
-    .stChatMessage { 
-        border-radius: 20px; border: 1px solid rgba(37, 99, 235, 0.1); 
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-        background-color: white !important; margin-bottom: 15px;
-    }
-    
-    /* Panel */
-    [data-testid="stSidebar"] { background-color: white !important; border-right: 1px solid #e2e8f0; }
-    
-    /* Giriş sahəsini həmişə görünən edirik */
-    .stChatInputContainer { padding-bottom: 20px; }
+    .stChatMessage { border-radius: 15px; background: #f1f5f9 !important; border: none !important; }
+    .stChatInputContainer { border-top: 2px solid #2563eb !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. GÜCLÜ BEYİN SİSTEMİ ---
-# Sənin verdiyin yeni aktiv açar
+# --- 2. GÜCLÜ API BAĞLANTISI ---
 API_KEY = "AIzaSyDCZOA_i6weUCMht1r-VowZvdpv7y-ct_E"
 genai.configure(api_key=API_KEY)
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# --- 3. YAN PANEL ---
+# --- 3. PANEL ---
 with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/2103/2103807.png", width=80)
-    st.markdown("### ⚙️ Sistem Paneli")
-    st.info(f"👤 Yaradıcı: Abdullah Mikayılov\n🚀 Status: Ultra Aktiv")
-    
-    if st.button("🗑️ Yaddaşı Sıfırla", use_container_width=True):
+    st.title("🚀 A-Zəka Pro")
+    st.success("Yaradıcı: Abdullah Mikayılov")
+    st.write("Sistem: 1.0s Cavab Rejimi")
+    if st.button("🗑️ Tarixçəni Sil", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
 
 st.markdown("<h1 class='main-title'>🧠 A-Zəka Ultra</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; color:#64748b; margin-top:-20px;'>Dünyanın ən mürəkkəb suallarına 1 saniyədə cavab verən süni intellekt</p>", unsafe_allow_html=True)
 
-# Çat tarixçəsi
+# Çat Tarixçəsi
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# --- 4. GİRİŞ VƏ MƏNTİQ (HEÇ VAXT BLOKLANMIR) ---
-prompt = st.chat_input("Sualınızı buraya yazın...")
+# --- 4. ANALİZ VƏ ANLIQ CAVAB MEXANİZMİ ---
+prompt = st.chat_input("Sualını bura yaz, Abdullah...")
 
 if prompt:
-    # İstifadəçinin mesajını dərhal ekrana ver
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        response_placeholder = st.empty()
-        full_response = ""
+        res_area = st.empty()
+        full_res = ""
         
-        # MODEL İERARXİYASI: Biri işləməsə dərhal o birinə keçir
-        models_to_try = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']
-        success = False
+        # Saniyəlik keçid sistemi
+        # Ən sürətli modeldən başlayaraq yoxlayır
+        brain_models = ['gemini-1.5-flash', 'gemini-pro']
         
-        for model_name in models_to_try:
+        found = False
+        for m_name in brain_models:
+            if found: break
             try:
-                model = genai.GenerativeModel(model_name)
-                # Cavabı saniyələr içində (stream) alırıq
+                # Modeli çağırırıq
+                model = genai.GenerativeModel(m_name)
+                
+                # Cavabı parçalarla (stream) gətiririk ki, donmasın
                 response = model.generate_content(prompt, stream=True)
                 
                 for chunk in response:
                     if chunk.text:
-                        full_response += chunk.text
-                        response_placeholder.markdown(full_response + "▌")
+                        full_res += chunk.text
+                        res_area.markdown(full_res + "▌")
                 
-                response_placeholder.markdown(full_response)
-                st.session_state.messages.append({"role": "assistant", "content": full_response})
-                success = True
-                break # Əgər bir model cavab verdisə, dayandır
-                
-            except Exception:
-                continue # 404 və ya aktivlik xətası olsa, növbəti modeli yoxla
+                res_area.markdown(full_res)
+                st.session_state.messages.append({"role": "assistant", "content": full_res})
+                found = True
+            except:
+                # Əgər model "naz" eləsə, Abdullah heç nə görmür, sistem növbəti modeli yoxlayır
+                continue
         
+        if not found:
+            res_area.error("Hazırda Google-un bütün beyinləri məşğuldur. Zəhmət olmasa 10 saniyə sonra yenidən cəhd et.")
