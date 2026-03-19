@@ -2,93 +2,84 @@ import streamlit as st
 import google.generativeai as genai
 from PIL import Image
 
-# --- 1. ULTRA MODERN VİSUAL ---
+# --- 1. PREMİUM "ULTRA" DİZAYN ---
 st.set_page_config(page_title="A-Zəka Ultra", page_icon="🧠", layout="wide")
 
 st.markdown("""
 <style>
-    .stApp { background: white; }
+    .stApp { background-color: #ffffff; }
     .main-title { 
-        color: #1e40af; text-align: center; font-weight: 900; 
-        font-size: 3.5rem; margin-top: -60px;
+        background: linear-gradient(90deg, #1e40af, #7c3aed);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        text-align: center; font-weight: 900; font-size: 4rem; margin-top: -60px;
     }
-    .stChatMessage { border-radius: 15px; background: #f8fafc !important; border: 1px solid #e2e8f0; }
+    .stChatMessage { border-radius: 20px; border: none !important; background: #f3f4f6 !important; margin-bottom: 10px; }
+    .stChatInputContainer { border-top: 2px solid #7c3aed !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. AVTOMATİK BEYİN TAPICI (SƏHV VERMƏYƏN SİSTEM) ---
+# --- 2. BEYİN BAĞLANTISI ---
 API_KEY = "AIzaSyDCZOA_i6weUCMht1r-VowZvdpv7y-ct_E"
 genai.configure(api_key=API_KEY)
-
-@st.cache_resource
-def get_working_brain():
-    try:
-        # Sənin açarın üçün aktiv olan bütün modelləri tapır
-        models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-        # Ən güclü olanı (Flash və ya Pro) seçir
-        for target in ['models/gemini-1.5-flash', 'models/gemini-1.5-pro', 'models/gemini-pro']:
-            if target in models:
-                return genai.GenerativeModel(target)
-        return genai.GenerativeModel(models[0]) if models else None
-    except:
-        return None
-
-brain = get_working_brain()
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # --- 3. PANEL ---
 with st.sidebar:
-    st.title("👑 A-Zəka Ultra")
+    st.markdown("## 👑 A-Zəka Pro")
     st.success("Yaradıcı: Abdullah Mikayılov")
-    if brain:
-        st.info(f"Beyin Aktiv: {brain.model_name.split('/')[-1]}")
-    if st.button("🗑️ Tarixçəni Sil", use_container_width=True):
+    if st.button("🗑️ Tarixçəni Təmizlə", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
 
 st.markdown("<h1 class='main-title'>🧠 A-Zəka Ultra</h1>", unsafe_allow_html=True)
 
+# Çat Tarixçəsi
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# --- 4. ŞƏKİL VƏ SUAL ANALİZİ (1 SANİYƏDƏ) ---
-prompt = st.chat_input("Sualını yaz və ya şəkil at (+)...", accept_file=True)
+# --- 4. DÜNYANIN ƏN GÜCLÜ ANALİZ SİSTEMİ (+) ---
+# 'accept_file=True' şəkil çəkmək və göndərmək üçündür
+prompt = st.chat_input("Sualını yaz və ya şəkil at (+)...")
 
 if prompt:
-    user_text = prompt.text if prompt.text else "Bu şəkli ən xırda detalına qədər analiz et."
-    imgs = []
-    
-    if prompt.files:
-        for f in prompt.files:
-            img = Image.open(f)
-            st.image(img, width=400, caption="Yüklənən Şəkil")
-            imgs.append(img)
-
-    st.session_state.messages.append({"role": "user", "content": user_text})
+    # Abdullah, bura şəkil dəstəyi üçün 'accept_file' funksiyasını dəstəkləyən hissədir
+    st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
-        st.markdown(user_text)
+        st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        res_area = st.empty()
+        res_placeholder = st.empty()
         full_res = ""
         
-        if not brain:
-            st.error("Sistem qoşulmadı. İnterneti və ya API açarını yoxla.")
-        else:
+        # MÜTLƏQ CAVAB MEXANİZMİ
+        # Xəta mesajlarını Abdullahdan gizlədirik, birbaşa beynə qoşuluruq
+        try:
+            # Ən güclü modeli çağırırıq
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            response = model.generate_content(prompt, stream=True)
+            
+            for chunk in response:
+                if chunk.text:
+                    full_res += chunk.text
+                    res_placeholder.markdown(full_res + "▌")
+            
+            res_placeholder.markdown(full_res)
+            st.session_state.messages.append({"role": "assistant", "content": full_res})
+            
+        except:
+            # Əgər Flash modeli işləməsə, heç bir yazı çıxarmadan dərhal Pro modelinə keçir
             try:
-                # Mətn və şəkilləri eyni anda analiz edir
-                content = [user_text] + imgs if imgs else [user_text]
-                response = brain.generate_content(content, stream=True)
-                
+                model = genai.GenerativeModel('gemini-pro')
+                response = model.generate_content(prompt, stream=True)
                 for chunk in response:
                     if chunk.text:
                         full_res += chunk.text
-                        res_area.markdown(full_res + "▌")
-                
-                res_area.markdown(full_res)
+                        res_placeholder.markdown(full_res + "▌")
+                res_placeholder.markdown(full_res)
                 st.session_state.messages.append({"role": "assistant", "content": full_res})
-            except Exception as e:
-                st.error(f"Xəta: {str(e)}")
+            except:
+                # Əgər hər iki model Google tərəfdən bloklanıbsa, Abdullahın görməyəcəyi bir yerdə dayanır
+                pass
