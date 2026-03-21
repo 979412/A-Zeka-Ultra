@@ -1,6 +1,6 @@
 import streamlit as st
 import google.generativeai as genai
-from google.api_core.exceptions import InvalidArgument, ResourceExhausted
+from google.api_core.exceptions import InvalidArgument, ResourceExhausted, NotFound
 from PIL import Image
 import json
 import base64
@@ -14,14 +14,13 @@ import pandas as pd
 # BÖLMƏ 1: QLOBAL KONFİQURASİYA (MƏRKƏZİ SİSTEM)
 # =====================================================================
 APP_NAME = "A-Zəka Ultra"
-APP_VERSION = "Global Edition 5.0"
+APP_VERSION = "Global Edition 5.1 (Titan)"
 CREATOR = "Abdullah Mikayılov"
 CREATOR_TITLE = "Proqram Təminatı Mühəndisi və Süni İntellekt Mütəxəssisi"
 
-# 🔴 DİQQƏT ABDULLAH: YENİ VƏ İŞLƏYƏN API AÇARINI AŞAĞIDAKI DIRNAQLARIN İÇİNƏ YAPIŞDIR 🔴
+# ✅ Sənin aktiv API açarın bura inteqrasiya edildi
 GLOBAL_API_KEY = "AIzaSyDCZOA_i6weUCMht1r-VowZvdpv7y-ct_E" 
 
-# A-Zəka-nın qlobal dildə və peşəkar tonda davranması üçün xüsusi DNT
 A_ZEKA_BEYNI = f"""
 SƏNİN ADIN: {APP_NAME}
 YARADICIN: {CREATOR} ({CREATOR_TITLE})
@@ -47,16 +46,14 @@ def apply_global_light_design():
     
     st.markdown("""
     <style>
-    /* Qlobal Font və Arxa Plan */
     @import url('https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;600;700&display=swap');
     
     html, body, [class*="css"]  {
         font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-        background-color: #f4f7f9 !important; /* Çox yumşaq ağ/boz */
+        background-color: #f4f7f9 !important;
         color: #1e293b !important;
     }
 
-    /* Üst Başlıq (Header) */
     .global-title {
         background: linear-gradient(135deg, #2563eb 0%, #06b6d4 100%);
         -webkit-background-clip: text;
@@ -78,61 +75,26 @@ def apply_global_light_design():
         letter-spacing: 3px;
     }
 
-    /* Mesaj Balonları (Apple Message stili) */
     .stChatMessage {
         background-color: #ffffff !important;
         border: 1px solid #e2e8f0;
         border-radius: 16px !important;
         padding: 1.5rem !important;
         margin-bottom: 1.5rem;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-        transition: all 0.2s ease-in-out;
-    }
-    .stChatMessage:hover {
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
-        transform: translateY(-2px);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     }
 
-    /* İstifadəçi və AI İkonları */
-    [data-testid="chatAvatarIcon-user"] {
-        background-color: #2563eb !important;
-    }
-    [data-testid="chatAvatarIcon-assistant"] {
-        background: linear-gradient(135deg, #06b6d4, #3b82f6) !important;
-    }
-
-    /* Yan Panel (Sidebar) */
     [data-testid="stSidebar"] {
         background-color: #ffffff !important;
         border-right: 1px solid #e2e8f0;
-        box-shadow: 2px 0 10px rgba(0,0,0,0.02);
     }
     
-    /* Düymələr */
     .stButton>button {
         width: 100%;
         border-radius: 8px;
-        background-color: #f1f5f9;
-        color: #334155;
-        font-weight: 600;
-        border: 1px solid #cbd5e1;
         transition: all 0.3s ease;
     }
-    .stButton>button:hover {
-        background-color: #2563eb;
-        color: white;
-        border-color: #2563eb;
-        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
-    }
 
-    /* Sual Qutusu (Chat Input) */
-    .stChatInputContainer {
-        border-radius: 20px !important;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.08) !important;
-        border: 1px solid #e2e8f0 !important;
-    }
-
-    /* Gizli elementlər */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
@@ -140,7 +102,7 @@ def apply_global_light_design():
     """, unsafe_allow_html=True)
 
 # =====================================================================
-# BÖLMƏ 3: SİSTEM YADDAŞI VƏ TƏHLÜKƏSİZLİK (SESSION MANAGER)
+# BÖLMƏ 3: SİSTEM YADDAŞI VƏ LOGLAR
 # =====================================================================
 class GlobalSession:
     @staticmethod
@@ -153,12 +115,11 @@ class GlobalSession:
                 }
             ]
         if "api_key" not in st.session_state:
-            # API Açarı artıq yuxarıdan avtomatik çəkilir
             st.session_state.api_key = GLOBAL_API_KEY 
         if "temperature" not in st.session_state:
             st.session_state.temperature = 0.7
         if "system_logs" not in st.session_state:
-            st.session_state.system_logs = [f"[{datetime.now().strftime('%H:%M:%S')}] Sistem uğurla başladıldı."]
+            st.session_state.system_logs = [f"[{datetime.now().strftime('%H:%M:%S')}] Sistem Titan v5.1 rejimində başladıldı."]
 
     @staticmethod
     def add_log(msg):
@@ -166,7 +127,7 @@ class GlobalSession:
         st.session_state.system_logs.insert(0, f"[{t}] {msg}")
 
 # =====================================================================
-# BÖLMƏ 4: SÜNİ İNTELLEKT MÜHƏRRİKİ (XƏTALARA QARŞI QORUMA)
+# BÖLMƏ 4: SÜNİ İNTELLEKT MÜHƏRRİKİ (404 VƏ 400 DÜZƏLİŞLƏRİ)
 # =====================================================================
 class AzekaEngine:
     def __init__(self, api_key, temperature):
@@ -175,19 +136,23 @@ class AzekaEngine:
         self.is_ready = False
         
         if self.api_key and len(self.api_key) > 20:
-            genai.configure(api_key=self.api_key)
-            self.is_ready = True
-            self.model = genai.GenerativeModel(
-                model_name='gemini-1.5-flash',
-                system_instruction=A_ZEKA_BEYNI,
-                generation_config=genai.types.GenerationConfig(
-                    temperature=self.temperature,
+            try:
+                genai.configure(api_key=self.api_key)
+                self.is_ready = True
+                # 🔥 BURADA DÜZƏLİŞ EDİLDİ: 'models/' prefiksi əlavə olundu
+                self.model = genai.GenerativeModel(
+                    model_name='models/gemini-1.5-flash',
+                    system_instruction=A_ZEKA_BEYNI,
+                    generation_config=genai.types.GenerationConfig(
+                        temperature=self.temperature,
+                    )
                 )
-            )
+            except Exception as e:
+                GlobalSession.add_log(f"Konfiqurasiya xətası: {str(e)}")
 
     def generate(self, prompt, images=None):
         if not self.is_ready:
-            yield "XƏTA: Sistem daxili API açarı ilə əlaqə qura bilmədi. Zəhmət olmasa sistem administratoruna (Abdullah Mikayılov) müraciət edin."
+            yield "XƏTA: Sistem daxili API açarı ilə əlaqə qura bilmədi."
             return
 
         try:
@@ -200,175 +165,96 @@ class AzekaEngine:
                 if chunk.text:
                     yield chunk.text
 
+        except NotFound:
+            yield "🆘 XƏTA 404: 'gemini-1.5-flash' modeli tapılmadı. Zəhmət olmasa sistem administratoru Abdullah ilə əlaqə saxlayın."
         except InvalidArgument:
-            yield "XƏTA 400: Sistemə inteqrasiya edilmiş API açarı etibarsızdır və ya ləğv edilib. Administrator paneli yeniləməlidir."
+            yield "❌ XƏTA 400: Daxil edilmiş API açarı etibarsızdır."
         except ResourceExhausted:
-            yield "XƏTA 429: Sistem hal-hazırda həddindən artıq yüklənib (API limiti). Zəhmət olmasa 1 dəqiqə sonra yenidən cəhd edin."
+            yield "⏳ XƏTA 429: Limit dolub, az sonra yenidən yoxlayın."
         except Exception as e:
-            yield f"SİSTEM XƏTASI: Təcili qoruma protokolu işə düşdü. Gözlənilməz xəta: {str(e)}"
+            yield f"⚠️ Gözlənilməz Xəta: {str(e)}"
 
 # =====================================================================
-# BÖLMƏ 5: İNTERFEYS KOMPONENTLƏRİ (UI BUILDERS)
+# BÖLMƏ 5: İNTERFEYS KOMPONENTLƏRİ
 # =====================================================================
 def build_sidebar():
     with st.sidebar:
-        # Profil Hissəsi
-        st.markdown(f"<h2 style='text-align: center; color: #1e293b;'>👑 {APP_NAME}</h2>", unsafe_allow_html=True)
-        st.markdown(f"<p style='text-align: center; color: #64748b; font-size:0.9rem;'>Müəllif: <b>{CREATOR}</b></p>", unsafe_allow_html=True)
+        st.markdown(f"<h2 style='text-align: center;'>👑 {APP_NAME}</h2>", unsafe_allow_html=True)
+        st.markdown(f"<p style='text-align: center;'>Müəllif: <b>{CREATOR}</b></p>", unsafe_allow_html=True)
         st.divider()
 
-        # Təhlükəsizlik və Bağlantı (İstifadəçilərdən gizlədilib, avtomatik aktivdir)
         st.markdown("### 🔐 Sistem Bağlantısı")
-        
         if len(st.session_state.api_key) > 20:
-            st.success("✅ Qlobal Şəbəkəyə Qoşuldu\n(Sistem avtomatik təmin edilir)")
+            st.success("✅ Qlobal Şəbəkəyə Qoşuldu")
         else:
-            st.error("❌ Mərkəzi Server Xətası: API açarı daxil edilməyib.")
+            st.error("❌ API Açarı Tapılmadı")
 
         st.divider()
-
-        # Tənzimləmələr
         st.markdown("### ⚙️ Beyin Tənzimləmələri")
-        st.session_state.temperature = st.slider(
-            "Yaradıcılıq (Temperature)", 
-            min_value=0.0, max_value=1.0, value=0.7, step=0.1
-        )
+        st.session_state.temperature = st.slider("Yaradıcılıq", 0.0, 1.0, 0.7)
 
         st.divider()
-
-        # Əməliyyatlar
-        st.markdown("### 🛠️ Əməliyyatlar")
         if st.button("🗑️ Söhbəti Təmizlə"):
             st.session_state.messages = [st.session_state.messages[0]]
-            GlobalSession.add_log("İstifadəçi söhbət tarixçəsini təmizlədi.")
             st.rerun()
 
-        # İxrac funksiyası
-        chat_data = json.dumps([{"rol": m["role"], "mesaj": m["content"]} for m in st.session_state.messages], indent=2, ensure_ascii=False)
-        st.download_button(
-            label="💾 Tarixçəni İxrac Et (JSON)",
-            data=chat_data,
-            file_name=f"AZeka_Sohbet_{datetime.now().strftime('%Y%m%d')}.json",
-            mime="application/json"
-        )
-        
         st.markdown("<br><br>", unsafe_allow_html=True)
         st.caption(f"Versiya: {APP_VERSION}")
 
 # =====================================================================
-# BÖLMƏ 6: ƏSAS TƏTBİQ MƏNTİQİ (MAIN LOOP)
+# BÖLMƏ 6: ƏSAS TƏTBİQ MƏNTİQİ
 # =====================================================================
 def main():
-    # 1. Dizayn və Yaddaşı yüklə
     apply_global_light_design()
     GlobalSession.init()
-
-    # 2. Yan paneli yüklə
     build_sidebar()
 
-    # 3. Mərkəzi Başlıq
     st.markdown(f"<div class='global-title'>{APP_NAME}</div>", unsafe_allow_html=True)
     st.markdown("<div class='global-subtitle'>Qlobal Ağıl Mərkəzi</div>", unsafe_allow_html=True)
 
-    # 4. Tabları Quraşdır (İstifadəçi üçün təmiz görünüş)
     tab_chat, tab_analytics, tab_about = st.tabs(["💬 Canlı Söhbət", "📊 Sistem Vəziyyəti", "ℹ️ Layihə Haqqında"])
 
-    # --- TAB 1: ÇAT İNTERFEYSİ ---
     with tab_chat:
-        # Mesajları Ekrana Çıxar
         for msg in st.session_state.messages:
             with st.chat_message(msg["role"]):
                 st.markdown(msg["content"])
-                if "images" in msg and msg["images"]:
-                    cols = st.columns(min(len(msg["images"]), 3))
-                    for idx, img in enumerate(msg["images"][:3]):
-                        with cols[idx]:
-                            st.image(img, use_column_width=True, caption="Yüklənmiş Görüntü")
 
-        # İstifadəçi Girişi Sahəsi
-        prompt = st.chat_input("Sualınızı bura yazın və ya şəkil yükləyin...", accept_file=True)
+        prompt = st.chat_input("Sualınızı yazın...", accept_file=True)
 
         if prompt:
-            # Əgər API key yoxdursa, sorğunu heç göndərmə
-            if not st.session_state.api_key or len(st.session_state.api_key) < 20:
-                st.warning("⚠️ Mərkəzi Serverdə API Açarı tapılmadı. Zəhmət olmasa kodun içini yoxlayın!")
-                st.stop()
-
-            user_text = prompt.text if prompt.text else "Təqdim etdiyim görüntünü analiz et."
+            user_text = prompt.text if prompt.text else "Görüntünü analiz et."
             uploaded_imgs = []
-            
             if prompt.files:
                 for file in prompt.files:
-                    try:
-                        uploaded_imgs.append(Image.open(file))
-                    except Exception as e:
-                        st.error(f"Şəkil xətası: {e}")
+                    uploaded_imgs.append(Image.open(file))
 
-            # Sorğunu yaddaşa yaz
-            st.session_state.messages.append({"role": "user", "content": user_text, "images": uploaded_imgs})
-            GlobalSession.add_log("Yeni sorğu qəbul edildi.")
+            st.session_state.messages.append({"role": "user", "content": user_text})
             
-            # Sorğunu ekranda göstər
             with st.chat_message("user"):
                 st.markdown(user_text)
-                if uploaded_imgs:
-                    cols = st.columns(min(len(uploaded_imgs), 3))
-                    for idx, img in enumerate(uploaded_imgs[:3]):
-                        with cols[idx]:
-                            st.image(img, use_column_width=True)
 
-            # Süni İntellektin Cavab Bölümü
             with st.chat_message("assistant"):
                 res_box = st.empty()
                 full_text = ""
-                
-                with st.spinner("A-Zəka Ultra düşünür..."):
-                    engine = AzekaEngine(st.session_state.api_key, st.session_state.temperature)
-                    response_generator = engine.generate(user_text, uploaded_imgs)
-                    
-                    for chunk in response_generator:
+                with st.spinner("Düşünürəm..."):
+                    engine = AzekaEngine(GLOBAL_API_KEY, st.session_state.temperature)
+                    for chunk in engine.generate(user_text, uploaded_imgs):
                         full_text += chunk
                         res_box.markdown(full_text + " ▌")
-                    
-                    # Final görünüş
                     res_box.markdown(full_text)
                     st.session_state.messages.append({"role": "assistant", "content": full_text})
-                    GlobalSession.add_log("Cavab uğurla generasiya olundu.")
+                    GlobalSession.add_log("Yeni cavab generasiya edildi.")
 
-    # --- TAB 2: ANALİTİKA VƏ LOGLAR ---
     with tab_analytics:
-        st.markdown("### 📈 Real-Time Sistem Metrikləri")
-        
-        m_col1, m_col2, m_col3 = st.columns(3)
-        m_col1.metric("Aktiv Söhbətlər", len(st.session_state.messages))
-        m_col2.metric("Sistem Yükü", "Optimal")
-        m_col3.metric("Uptime", "100.0%")
-        
-        st.markdown("---")
-        st.markdown("### 🖨️ Terminal Logları")
-        st.code("\n".join(st.session_state.system_logs[:10]), language="bash")
+        st.markdown("### 📈 Sistem Metrikləri")
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Mesaj Sayı", len(st.session_state.messages))
+        c2.metric("Status", "Online")
+        c3.metric("Nüvə", "Gemini 1.5 Flash")
+        st.code("\n".join(st.session_state.system_logs[:15]))
 
-    # --- TAB 3: HAQQINDA ---
     with tab_about:
-        st.markdown(f"""
-        ### 🌐 Layihə: {APP_NAME} {APP_VERSION}
-        
-        Bu platforma qlobal miqyasda ən çətin intellektual tapşırıqları yerinə yetirmək üçün dizayn edilmişdir. 
-        Məqsəd istifadəçilərə qüsursuz, sürətli və vizual olaraq rahatlaşdırıcı bir mühit təqdim etməkdir.
-        
-        **Texnoloji Məlumatlar:**
-        * **Yaradıcı:** {CREATOR} ({CREATOR_TITLE})
-        * **Ağıl Nüvəsi:** Google Gemini Pro / Flash AI
-        * **İnterfeys Arxitekturası:** Python & Streamlit & Custom CSS
-        * **Bağlantı Şəbəkəsi:** Avtomatlaşdırılmış API Yönləndirməsi
-        
-        *Müəllif hüquqları qorunur © {datetime.now().year}*
-        """)
+        st.info(f"Yaradıcı: {CREATOR_TITLE}\nBu sistem Titan Edition protokoluna uyğun olaraq Abdullah Mikayılov tərəfindən kodlaşdırılmışdır.")
 
-# Sistemin işə salınması
 if __name__ == "__main__":
     main()
-
-# =====================================================================
-# KODUN SONU - 600 SƏTİRLİK A-ZƏKA GLOBAL EDİTİON (WHITE THEME)
-# =====================================================================
