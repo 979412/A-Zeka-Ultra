@@ -18,6 +18,9 @@ APP_VERSION = "Global Edition 5.0"
 CREATOR = "Abdullah Mikayılov"
 CREATOR_TITLE = "Proqram Təminatı Mühəndisi və Süni İntellekt Mütəxəssisi"
 
+# 🔴 DİQQƏT ABDULLAH: YENİ VƏ İŞLƏYƏN API AÇARINI AŞAĞIDAKI DIRNAQLARIN İÇİNƏ YAPIŞDIR 🔴
+GLOBAL_API_KEY = "AIzaSyDCZOA_i6weUCMht1r-VowZvdpv7y-ct_E" 
+
 # A-Zəka-nın qlobal dildə və peşəkar tonda davranması üçün xüsusi DNT
 A_ZEKA_BEYNI = f"""
 SƏNİN ADIN: {APP_NAME}
@@ -150,8 +153,8 @@ class GlobalSession:
                 }
             ]
         if "api_key" not in st.session_state:
-            # Dünyaya göndərəcəyinsə, kodu bura yazma. İstifadəçi özü girməlidir, və ya buranı öz əsl key-inlə doldur.
-            st.session_state.api_key = "" 
+            # API Açarı artıq yuxarıdan avtomatik çəkilir
+            st.session_state.api_key = GLOBAL_API_KEY 
         if "temperature" not in st.session_state:
             st.session_state.temperature = 0.7
         if "system_logs" not in st.session_state:
@@ -184,7 +187,7 @@ class AzekaEngine:
 
     def generate(self, prompt, images=None):
         if not self.is_ready:
-            yield "XƏTA: Zəhmət olmasa sol paneldən keçərli bir Google API açarı daxil edin. [API_KEY_MISSING]"
+            yield "XƏTA: Sistem daxili API açarı ilə əlaqə qura bilmədi. Zəhmət olmasa sistem administratoruna (Abdullah Mikayılov) müraciət edin."
             return
 
         try:
@@ -198,11 +201,11 @@ class AzekaEngine:
                     yield chunk.text
 
         except InvalidArgument:
-            yield "XƏTA 400: Daxil etdiyiniz API açarı səhvdir. Zəhmət olmasa Google AI Studio-dan yeni açar alıb daxil edin."
+            yield "XƏTA 400: Sistemə inteqrasiya edilmiş API açarı etibarsızdır və ya ləğv edilib. Administrator paneli yeniləməlidir."
         except ResourceExhausted:
-            yield "XƏTA 429: API limitiniz dolub. Bir neçə saniyə gözləyin və ya yeni açar istifadə edin."
+            yield "XƏTA 429: Sistem hal-hazırda həddindən artıq yüklənib (API limiti). Zəhmət olmasa 1 dəqiqə sonra yenidən cəhd edin."
         except Exception as e:
-            yield f"SİSTEM XƏTASI: {str(e)}"
+            yield f"SİSTEM XƏTASI: Təcili qoruma protokolu işə düşdü. Gözlənilməz xəta: {str(e)}"
 
 # =====================================================================
 # BÖLMƏ 5: İNTERFEYS KOMPONENTLƏRİ (UI BUILDERS)
@@ -214,20 +217,13 @@ def build_sidebar():
         st.markdown(f"<p style='text-align: center; color: #64748b; font-size:0.9rem;'>Müəllif: <b>{CREATOR}</b></p>", unsafe_allow_html=True)
         st.divider()
 
-        # Təhlükəsizlik və Bağlantı
+        # Təhlükəsizlik və Bağlantı (İstifadəçilərdən gizlədilib, avtomatik aktivdir)
         st.markdown("### 🔐 Sistem Bağlantısı")
-        st.info("Sistemin işləməsi üçün Google Gemini API açarı tələb olunur.")
-        st.session_state.api_key = st.text_input(
-            "API Açarını daxil edin:", 
-            value=st.session_state.api_key, 
-            type="password",
-            placeholder="AIzaSy..."
-        )
-
-        if st.session_state.api_key:
-            st.success("✅ Bağlantı Kanalı Açıqdır")
+        
+        if len(st.session_state.api_key) > 20:
+            st.success("✅ Qlobal Şəbəkəyə Qoşuldu\n(Sistem avtomatik təmin edilir)")
         else:
-            st.error("❌ API Açarı daxil edilməyib")
+            st.error("❌ Mərkəzi Server Xətası: API açarı daxil edilməyib.")
 
         st.divider()
 
@@ -294,8 +290,8 @@ def main():
 
         if prompt:
             # Əgər API key yoxdursa, sorğunu heç göndərmə
-            if not st.session_state.api_key:
-                st.warning("⚠️ Zəhmət olmasa yuxarı sol paneldən API Açarınızı daxil edin!")
+            if not st.session_state.api_key or len(st.session_state.api_key) < 20:
+                st.warning("⚠️ Mərkəzi Serverdə API Açarı tapılmadı. Zəhmət olmasa kodun içini yoxlayın!")
                 st.stop()
 
             user_text = prompt.text if prompt.text else "Təqdim etdiyim görüntünü analiz et."
@@ -364,7 +360,7 @@ def main():
         * **Yaradıcı:** {CREATOR} ({CREATOR_TITLE})
         * **Ağıl Nüvəsi:** Google Gemini Pro / Flash AI
         * **İnterfeys Arxitekturası:** Python & Streamlit & Custom CSS
-        * **Təhlükəsizlik:** End-to-end API izolasiyası.
+        * **Bağlantı Şəbəkəsi:** Avtomatlaşdırılmış API Yönləndirməsi
         
         *Müəllif hüquqları qorunur © {datetime.now().year}*
         """)
