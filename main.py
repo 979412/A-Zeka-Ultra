@@ -1,109 +1,208 @@
 import streamlit as st
 import google.generativeai as genai
 from PIL import Image
+import time
 from datetime import datetime
 
 # =====================================================================
-# BÖLMƏ 1: KONFİQURASİYA
+# 1. BEYİN VƏ SİSTEM KONFİQURASİYASI
 # =====================================================================
 APP_NAME = "A-Zəka Ultra"
+VERSION = "Titan 12.0 ProMax"
 CREATOR = "Abdullah Mikayılov"
-GLOBAL_API_KEY = "AIzaSyDCZOA_i6weUCMht1r-VowZvdpv7y-ct_E"
+API_KEY = "AIzaSyDCZOA_i6weUCMht1r-VowZvdpv7y-ct_E"
+
+SYSTEM_INSTRUCTION = f"""
+Sən {APP_NAME}-san. Yaradıcın dahi mühəndis {CREATOR}-dur. 
+Sən dünyanın ən sürətli və vizual zəkası ən yüksək olan süni intellektisən.
+Şəkilləri analiz edərkən son dərəcə detallı və peşəkar ol. Qısa, lakin dolğun cavablar ver.
+"""
 
 # =====================================================================
-# BÖLMƏ 2: DAHİ NÜVƏ (Şəkil və Mətn üçün Tam Sabitlik)
+# 2. PREMIUM GLASSMORPHISM DİZAYN (CSS)
 # =====================================================================
-class AzekaEngine:
-    def __init__(self, api_key, temperature):
-        self.api_key = api_key
-        self.temp = temperature
-        # Ən yeni model adları bunlardır:
-        self.models_to_try = [
-            'gemini-1.5-flash', 
-            'gemini-1.5-pro',
-            'gemini-pro-vision' # Şəkil üçün ehtiyat model
-        ]
+def inject_premium_css():
+    st.set_page_config(page_title=APP_NAME, page_icon="💎", layout="wide")
+    st.markdown("""
+    <style>
+    /* Qlobal Fon */
+    .stApp {
+        background: radial-gradient(circle at top left, #f8fafc, #e2e8f0);
+        font-family: 'SF Pro Display', -apple-system, sans-serif;
+    }
+    
+    /* Başlıq Dizaynı */
+    .ultra-title {
+        background: linear-gradient(135deg, #1e3a8a 0%, #06b6d4 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-size: 4.5rem; font-weight: 900; text-align: center;
+        letter-spacing: -2px; margin-bottom: 0px; padding-top: 20px;
+    }
+    .ultra-subtitle {
+        text-align: center; color: #64748b; font-size: 1.2rem; font-weight: 500;
+        margin-bottom: 40px; letter-spacing: 1px;
+    }
+    
+    /* Söhbət Qutuları (Glassmorphism Effekti) */
+    .stChatMessage {
+        background: rgba(255, 255, 255, 0.7) !important;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.5) !important;
+        border-radius: 24px !important;
+        padding: 20px !important;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+        margin-bottom: 20px;
+    }
+    
+    /* Chat Input (Daxil etmə paneli) */
+    .stChatInputContainer {
+        border-radius: 30px !important;
+        background: white !important;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.08) !important;
+        border: 2px solid #e2e8f0 !important;
+        padding: 5px !important;
+    }
+    
+    /* Sidebar */
+    [data-testid="stSidebar"] {
+        background: rgba(255, 255, 255, 0.8) !important;
+        backdrop-filter: blur(15px);
+        border-right: 1px solid rgba(255, 255, 255, 0.4);
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
-    def get_model(self, has_image=False):
-        genai.configure(api_key=self.api_key)
-        # Şəkil varsa, mütləq 1.5-flash və ya pro istifadə edilməlidir
-        for m_name in self.models_to_try:
-            try:
-                model = genai.GenerativeModel(model_name=m_name)
-                # Kiçik bir yoxlama
-                return model, m_name
-            except:
-                continue
-        return None, None
+# =====================================================================
+# 3. DAHİ VISION NÜVƏSİ (SƏHVƏ DAVAMLI)
+# =====================================================================
+class UltraVisionCore:
+    def __init__(self, temp_value):
+        # API Bağlantısını təmin edirik
+        genai.configure(api_key=API_KEY)
+        # Mütləq ən stabil vision modelini seçirik
+        self.model = genai.GenerativeModel(
+            model_name='gemini-1.5-flash',
+            system_instruction=SYSTEM_INSTRUCTION
+        )
+        self.temp = temp_value
 
-    def generate(self, prompt, context, images=None):
-        model, active_m = self.get_model(has_image=bool(images))
-        
-        if not model:
-            yield "🆘 KRİTİK XƏTA: Google API ilə bağlantı qurula bilmədi."
-            return
-
+    def analyze_and_respond(self, prompt_text, file_list):
         try:
-            # Şəkil və mətni Google-un istədiyi formatda birləşdiririk
-            contents = []
-            if images:
-                for img in images:
-                    contents.append(img)
-            contents.append(prompt)
-
-            response = model.generate_content(
-                contents,
+            # Modelə gedəcək məlumat paketi
+            payload = []
+            
+            # Əgər istifadəçi '+' düyməsi ilə şəkil yükləyibsə, onu paketə əlavə et
+            if file_list:
+                for file in file_list:
+                    # Şəkli oxuyub yaddaşa alırıq
+                    image = Image.open(file)
+                    # Əgər şəkil çox böyükdürsə rəng rejimini tənzimləyirik ki, çökməsin
+                    if image.mode != 'RGB':
+                        image = image.convert('RGB')
+                    payload.append(image)
+            
+            # Sualı da paketə əlavə edirik
+            payload.append(prompt_text)
+            
+            # Təhlükəsizlik və sürət üçün Streaming (Axın) ilə cavab alırıq
+            response = self.model.generate_content(
+                payload, 
                 stream=True,
-                generation_config={"temperature": self.temp}
+                generation_config=genai.types.GenerationConfig(temperature=self.temp)
             )
             
+            # Cavabı hissə-hissə ekrana qaytarırıq (Donmanın qarşısını alır)
             for chunk in response:
                 if chunk.text:
                     yield chunk.text
+                    
         except Exception as e:
-            yield f"⚠️ Xəta: Model şəkil analizini dəstəkləmir və ya {str(e)}"
+            # Xəta baş verərsə, sistemi çökdürmür, səbəbini mühəndisə deyir
+            error_msg = str(e)
+            if "API_KEY" in error_msg or "400" in error_msg:
+                yield "⚠️ Xəta: API açarı etibarsızdır və ya şəbəkə problemi var."
+            else:
+                yield f"🆘 Kritik Sistem Xətası: {error_msg}. Zəhmət olmasa Replit terminalında kitabxanaları yeniləyin."
 
 # =====================================================================
-# BÖLMƏ 3: INTERFEYS
+# 4. ƏSAS İNTERFEYS (UI & MƏNTİQ)
 # =====================================================================
 def main():
-    st.set_page_config(page_title=APP_NAME, layout="wide")
+    inject_premium_css()
     
-    # Dizayn hissəsini bura əlavə edə bilərsən (st.markdown ilə)
-    
-    if "messages" not in st.session_state:
-        st.session_state.messages = [{"role": "assistant", "content": "Salam Abdullah! Şəkilləri bura ata bilərsən."}]
+    # Söhbət tarixçəsini yadda saxlamaq üçün Session State
+    if "memory" not in st.session_state:
+        st.session_state.memory = [{"role": "assistant", "content": "Sistem aktivdir. Salam dahi yaradıcım! Mətn yaza və ya '+' düyməsi ilə mənə şəkil göstərə bilərsən."}]
 
-    for msg in st.session_state.messages:
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
+    # --- YAN PANEL (SIDEBAR) ---
+    with st.sidebar:
+        st.markdown(f"<h2 style='color:#1e3a8a; text-align:center;'>⚙️ İdarəetmə Paneli</h2>", unsafe_allow_html=True)
+        st.divider()
+        st.write(f"**Yaradıcı Mühəndis:** {CREATOR}")
+        st.write(f"**Versiya:** {VERSION}")
+        
+        # İntellekt səviyyəsini (Yaradıcılığı) tənzimləmək
+        temperature_setting = st.slider("İntellekt Dərəcəsi", min_value=0.0, max_value=1.0, value=0.7, step=0.1, help="0: Dəqiq və riyazi, 1: Yaradıcı və sərbəst")
+        
+        st.divider()
+        if st.button("🗑️ Yaddaşı Təmizlə", use_container_width=True):
+            st.session_state.memory = [st.session_state.memory[0]]
+            st.rerun()
 
-    # Chat Input (Şəkil dəstəyi ilə)
-    user_input = st.chat_input("Sual və ya şəkil...", accept_file=True)
+    # --- ƏSAS EKRAN ---
+    st.markdown(f"<div class='ultra-title'>{APP_NAME}</div>", unsafe_allow_html=True)
+    st.markdown("<div class='ultra-subtitle'>Global Neural Architecture</div>", unsafe_allow_html=True)
 
-    if user_input:
-        txt = user_input.text if user_input.text else "Bu şəkildə nə var?"
-        # Şəkilləri PIL formatına salırıq
-        imgs = [Image.open(f) for f in user_input.files] if user_input.files else []
+    # Keçmiş mesajları ekrana çap etmək
+    for message in st.session_state.memory:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
-        st.session_state.messages.append({"role": "user", "content": txt})
+    # --- GİRİŞ PANeli (ŞƏKİL DƏSTƏYİ İLƏ) ---
+    # Ən vacib sətir: accept_file=True yazılan yerin solunda '+' düyməsi yaradır
+    user_query = st.chat_input("Dahi mühəndis, sualını və ya şəklini daxil et...", accept_file=True)
+
+    if user_query:
+        # 1. İstifadəçinin sorğusunu emal et
+        text_content = user_query.text if user_query.text else "Bu təsvirin dərindən analizini apar."
+        
+        # İstifadəçi mesajını yaddaşa yaz və ekranda göstər
+        st.session_state.memory.append({"role": "user", "content": text_content})
+        
         with st.chat_message("user"):
-            st.markdown(txt)
-            for img in imgs:
-                st.image(img, width=300)
+            st.markdown(text_content)
+            # Əgər şəkil yüklənibsə, ekranda kiçik ölçüdə göstər
+            if user_query.files:
+                for file in user_query.files:
+                    st.image(file, width=250, caption="Analiz üçün sistemə ötürüldü")
 
+        # 2. Süni İntellektin cavabını yarat
         with st.chat_message("assistant"):
-            res_box = st.empty()
-            full_res = ""
-            engine = AzekaEngine(GLOBAL_API_KEY, 0.7)
+            response_container = st.empty()
+            accumulated_response = ""
             
-            with st.spinner("Analiz edilir..."):
-                for chunk in engine.generate(txt, st.session_state.messages, imgs):
-                    full_res += chunk
-                    res_box.markdown(full_res + " ▌")
-                res_box.markdown(full_res)
+            # Nüvəni işə salırıq
+            ai_core = UltraVisionCore(temp_value=temperature_setting)
             
-            st.session_state.messages.append({"role": "assistant", "content": full_res})
+            start_time = time.time()
+            
+            with st.spinner("A-Zəka məlumatları emal edir..."):
+                # Cavabı axın (stream) şəklində alırıq
+                for text_chunk in ai_core.analyze_and_respond(text_content, user_query.files):
+                    accumulated_response += text_chunk
+                    # Kursor effekti (▌) ilə ekrana yazdırırıq
+                    response_container.markdown(accumulated_response + " ▌")
+                
+            # Analiz bitəndə kursoru silib təmiz mətni veririk
+            response_container.markdown(accumulated_response)
+            
+            process_time = round(time.time() - start_time, 2)
+            st.caption(f"⚡ Məlumat işləndi: {process_time} saniyə")
+            
+            # Botun cavabını yaddaşa yaz
+            st.session_state.memory.append({"role": "assistant", "content": accumulated_response})
 
 if __name__ == "__main__":
     main()
