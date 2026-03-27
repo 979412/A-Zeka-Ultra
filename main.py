@@ -1,147 +1,150 @@
 """
 ====================================================================================================
-PROJECT: A-ZƏKA ULTRA - AUTO-HEALING & UI CORE
-MODULE: 03 - ENTERPRISE EDITION
-DEVELOPER: ABDULLAH MIKAYILOV
+A-ZƏKA ULTRA - ADVANCED NEURAL BRIDGE
+MÜHƏNDİS: ABDULLAH MİKAYILOV
+SİSTEM: DARK MATTER UI & DIRECT API CONNECTION
 ====================================================================================================
 """
 
 import streamlit as st
 import google.generativeai as genai
 from PIL import Image
-import time
-import logging
-
-# Logları arxa planda tuturuq ki, ekranda çirkin yazılar çıxmasın
-logging.basicConfig(level=logging.ERROR)
+import os
 
 # ==================================================================================================
-# 1. DİZAYN VƏ İNTERFEYS (PREMIUM APPLE STYLE)
+# 1. CORE CONFIGURATION & SECURITY
 # ==================================================================================================
-def inject_premium_ui():
-    st.set_page_config(page_title="A-Zəka Ultra", page_icon="🌌", layout="wide")
+class SystemConfig:
+    APP_NAME = "A-Zəka Ultra"
+    VERSION = "Build 9.0.0 (Dark Core)"
+    # Abdullah, əgər sistem yenə xəta versə, bu API açarını Google AI Studio-dan yenisi ilə əvəzlə!
+    API_KEY = "AIzaSyDCZOA_i6weUCMht1r-VowZvdpv7y-ct_E"
+    PRIMARY_MODEL = "gemini-1.5-flash"
+
+# ==================================================================================================
+# 2. PREMIUM DARK UI (ŞƏKİL 3-DƏKİ DİZAYN)
+# ==================================================================================================
+def render_dark_ui():
+    st.set_page_config(page_title=SystemConfig.APP_NAME, page_icon="🌌", layout="wide")
     st.markdown("""
     <style>
-    /* Ümumi təmiz fon */
-    .stApp { background-color: #ffffff !important; }
+    /* Qlobal Qara Fon */
+    .stApp {
+        background-color: #0b0f19 !important;
+        color: #e2e8f0;
+    }
     
-    /* Başlıq qradiyenti */
-    .gradient-text {
-        background: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%);
+    /* Başlıq və Loqo */
+    .cyber-title {
+        background: linear-gradient(90deg, #38bdf8, #818cf8);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        font-size: 3.5rem; font-weight: 800; text-align: center;
-        padding-bottom: 20px;
+        font-size: 3rem; font-weight: 800; letter-spacing: -1px;
+    }
+    
+    /* Mesaj Qutuları (İstifadəçi - Göy, Bot - Tünd qara) */
+    [data-testid="stChatMessageUser"] {
+        background-color: #2563eb !important;
+        border-radius: 15px 15px 0px 15px !important;
+        color: white !important;
+        border: none !important;
+    }
+    
+    [data-testid="stChatMessageAssistant"] {
+        background-color: #1e293b !important;
+        border-radius: 15px 15px 15px 0px !important;
+        border: 1px solid #334155 !important;
+        color: #f8fafc !important;
     }
 
-    /* Söhbət qutularının kölgələri */
-    .stChatMessage {
-        border-radius: 16px !important;
-        border: 1px solid #f1f5f9 !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-        background-color: #fdfdfd !important;
-        padding: 20px !important;
-    }
-
-    /* '+' Düyməsi üçün xüsusi dizayn */
+    /* Giriş Paneli (+) Düyməsi üçün */
     .stChatInputContainer {
-        border-radius: 20px !important;
-        border: 2px solid #e2e8f0 !important;
-        background: #ffffff !important;
-        box-shadow: 0 -5px 20px rgba(0,0,0,0.04) !important;
+        background-color: #1e293b !important;
+        border: 1px solid #334155 !important;
+        border-radius: 12px !important;
     }
-    .stChatInputContainer:focus-within { border-color: #3b82f6 !important; }
+    
+    /* Sidebar */
+    [data-testid="stSidebar"] {
+        background-color: #0f172a !important;
+        border-right: 1px solid #1e293b;
+    }
     </style>
     """, unsafe_allow_html=True)
 
 # ==================================================================================================
-# 2. AUTO-HEALER (XƏTALARI SƏSSİZCƏ HƏLL EDƏN NÜVƏ)
+# 3. DIRECT NEURAL CONNECTION (TƏMİZ VƏ SÜRƏTLİ ƏLAQƏ)
 # ==================================================================================================
-class IntelligentCore:
-    def __init__(self, api_key):
-        self.api_key = api_key
-        genai.configure(api_key=self.api_key)
-        
-    def get_fallback_model(self):
-        """Əgər əsas model 404 verərsə, alternativ və 100% işləyən modelləri yoxlayır."""
-        fallback_models = ['gemini-1.5-flash', 'gemini-1.0-pro-vision-latest', 'gemini-pro-vision']
-        
-        try:
-            # Serverdəki mövcud modellərin siyahısını çəkirik
-            available_models = [m.name for m in genai.list_models()]
-            for model_name in fallback_models:
-                if f"models/{model_name}" in available_models or model_name in available_models:
-                    return model_name
-            # Heç nə tapılmasa, qlobal köhnə versiyanı məcbur edirik
-            return 'gemini-pro-vision'
-        except Exception:
-            return 'gemini-1.5-flash' # Səssizcə standartı qaytar
+class BrainConnection:
+    def __init__(self):
+        genai.configure(api_key=SystemConfig.API_KEY)
+        self.model = genai.GenerativeModel(SystemConfig.PRIMARY_MODEL)
 
-    def analyze_data(self, text, images):
-        """Qırmızı xətaların qarşısını alan və məlumatı emal edən əsas funksiya."""
+    def generate_insight(self, prompt, images):
+        """Məlumatı birbaşa Google serverlərinə göndərir və cavabı alır."""
         try:
-            # Avtomatik işləyən modeli tap
-            safe_model_name = self.get_fallback_model()
-            model = genai.GenerativeModel(safe_model_name)
-            
             payload = []
             if images:
-                for img_file in images:
-                    img = Image.open(img_file).convert('RGB')
+                for f in images:
+                    img = Image.open(f).convert('RGB')
                     payload.append(img)
             
-            prompt = text if text else "Zəhmət olmasa bu vizualı dərindən analiz et."
-            payload.append(prompt)
+            final_prompt = prompt if prompt else "Bu vizualı dərindən analiz et."
+            payload.append(final_prompt)
             
-            response = model.generate_content(payload, stream=True)
+            # Streaming bağlantısı
+            response = self.model.generate_content(payload, stream=True)
             for chunk in response:
                 if chunk.text: yield chunk.text
                 
         except Exception as e:
-            # Əgər yenə də API xətası olarsa, qırmızı kod blokunu deyil, bu zərif mətni göstər
-            yield f"Sistem hazırda kiçik bir yenilənmə keçirir. Zəhmət olmasa bir neçə saniyə sonra təkrar yoxlayın. (Bərpa kodu aktivləşdirildi)"
+            # ƏGƏR XƏTA OLARSA, DƏQİQ SƏBƏBİNİ EKRANA YAZACAQ
+            error_msg = str(e)
+            yield f"🆘 **CRITICAL API ERROR:** Abdullah, qoşulma baş tutmadı.\n\n**Xətanın rəsmi səbəbi:** `{error_msg}`\n\n*Həll yolu:* API açarını yeniləyin və ya 'requirements.txt' faylının düzgün olduğuna əmin olun."
 
 # ==================================================================================================
-# 3. ƏSAS İNTERFEYS LOGİKASI
+# 4. ƏSAS İCRA (MAIN LOOP)
 # ==================================================================================================
 def main():
-    inject_premium_ui()
-    API_KEY = "AIzaSyDCZOA_i6weUCMht1r-VowZvdpv7y-ct_E"
+    render_dark_ui()
     
-    st.markdown('<div class="gradient-text">A-Zəka Ultra</div>', unsafe_allow_html=True)
+    # Başlıq
+    st.markdown(f'<div class="cyber-title">{SystemConfig.APP_NAME}</div>', unsafe_allow_html=True)
+    st.caption("Online | Secure Connection Established")
     
-    if "chat_history" not in st.session_state:
-        st.session_state.chat_history = [{"role": "assistant", "content": "Sistem 100% stabildir. Sizi dinləyirəm."}]
+    # Söhbət Tarixçəsi
+    if "messages" not in st.session_state:
+        st.session_state.messages = [{"role": "assistant", "content": "Salam. Necə kömək edə bilərəm?"}]
 
-    for msg in st.session_state.chat_history:
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
+    for m in st.session_state.messages:
+        with st.chat_message(m["role"]):
+            st.markdown(m["content"])
 
-    # '+' düyməli giriş sahəsi
-    user_input = st.chat_input("Dahi mühəndis, tapşırığınız nədir? (+ düyməsi ilə şəkil ata bilərsiniz)", accept_file=True)
+    # İstifadəçi Girişi (+ düyməsi burada aktivdir)
+    user_input = st.chat_input("Sualınızı bura yazın...", accept_file=True)
 
     if user_input:
-        txt = user_input.text if user_input.text else ""
-        st.session_state.chat_history.append({"role": "user", "content": txt})
+        text = user_input.text if user_input.text else ""
+        st.session_state.messages.append({"role": "user", "content": text})
         
         with st.chat_message("user"):
-            st.markdown(txt)
+            st.markdown(text)
             if user_input.files:
                 for f in user_input.files:
                     st.image(f, width=300)
 
         with st.chat_message("assistant"):
-            response_box = st.empty()
-            full_answer = ""
-            engine = IntelligentCore(api_key=API_KEY)
+            res_box = st.empty()
+            full_res = ""
+            brain = BrainConnection()
             
             with st.spinner("Analiz edilir..."):
-                for chunk in engine.analyze_data(txt, user_input.files):
-                    full_answer += chunk
-                    response_box.markdown(full_answer + " ▌")
-                response_box.markdown(full_answer)
+                for chunk in brain.generate_insight(text, user_input.files):
+                    full_res += chunk
+                    res_box.markdown(full_res + " ▌")
+                res_box.markdown(full_res)
             
-            st.session_state.chat_history.append({"role": "assistant", "content": full_answer})
+            st.session_state.messages.append({"role": "assistant", "content": full_res})
 
 if __name__ == "__main__":
     main()
