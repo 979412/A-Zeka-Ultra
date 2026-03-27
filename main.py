@@ -1,140 +1,79 @@
-"""
-================================================================================
-PROJECT: A-ZƏKA ULTRA - GLOBAL INTELLIGENCE SYSTEM
-ARCHITECT: ABDULLAH MIKAYILOV
-VERSION: 35.0 (TITAN SHIELD) - NO MORE 404 ERRORS
-================================================================================
-"""
-
 import streamlit as st
 import google.generativeai as genai
 from PIL import Image
+import os
 import time
 
-# ==============================================================================
-# 1. ULTIMATE CYBER DARK UI (REPLIT & APPLE MIX)
-# ==============================================================================
-def apply_ultra_design():
-    st.set_page_config(page_title="A-Zəka Ultra", page_icon="💠", layout="wide")
-    st.markdown("""
+# --- KONFİQURASİYA VƏ TƏHLÜKƏSİZLİK ---
+# API açarını burada qeyd edirik (Real layihədə bunu .env-də saxlamalısınız)
+API_KEY = "AIzaSyC3ze9DV5zdqFViVGs4vvxdvvkV5Eo-ptk"
+genai.configure(api_key=API_KEY)
+
+# --- SƏHİFƏ DİZAYNI (PREMIUM UI) ---
+st.set_page_config(page_title="Global AI Intelligence", page_icon="💎", layout="wide")
+
+st.markdown("""
     <style>
-    /* Ana Fon - Ultra Dark */
-    .stApp { background-color: #080a0f !important; color: #ffffff; }
-    
-    /* Başlıq Animasiyası */
-    .titan-header {
-        background: linear-gradient(90deg, #00d2ff 0%, #3a7bd5 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-size: 4rem; font-weight: 900; text-align: center;
-        filter: drop-shadow(0 0 10px rgba(0, 210, 255, 0.3));
-    }
-
-    /* Chat Balonları - Screenshot 3 Stilində */
-    [data-testid="stChatMessageUser"] {
-        background: #1d4ed8 !important; 
-        border-radius: 20px 20px 0px 20px !important;
-        margin-left: 20% !important;
-    }
-    
-    [data-testid="stChatMessageAssistant"] {
-        background-color: #161b22 !important;
-        border: 1px solid #30363d !important;
-        border-radius: 20px 20px 20px 0px !important;
-        margin-right: 20% !important;
-    }
-
-    /* Giriş Paneli (+) Düyməsi */
-    .stChatInputContainer {
-        border-radius: 15px !important;
-        background-color: #0d1117 !important;
-        border: 1px solid #30363d !important;
-    }
+    .stApp { background-color: #0b0e14; color: #e0e0e0; }
+    .main-title { font-size: 50px; font-weight: 800; background: -webkit-linear-gradient(#00f2fe, #4facfe); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-align: center; }
+    .stButton>button { width: 100%; border-radius: 12px; height: 3.5em; background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%); color: white; border: none; font-weight: bold; transition: 0.3s; }
+    .stButton>button:hover { transform: scale(1.02); box-shadow: 0px 5px 15px rgba(79, 172, 254, 0.4); }
+    .status-card { padding: 20px; border-radius: 15px; background: #161b22; border: 1px solid #30363d; }
     </style>
     """, unsafe_allow_html=True)
 
-# ==============================================================================
-# 2. TITAN SHIELD (XƏTA KEŞİKÇİSİ)
-# ==============================================================================
-class TitanShield:
-    def __init__(self, key):
-        genai.configure(api_key=key)
-        # 404-ün qarşısını almaq üçün sistemdəki mövcud modelləri yoxlayırıq
-        self.active_model = self.detect_model()
+# --- ƏSAS İNTELLEKT MƏNTİQİ ---
+class VisionaryAI:
+    def __init__(self):
+        self.model_flash = genai.GenerativeModel('gemini-1.5-flash')
+        self.model_pro = genai.GenerativeModel('gemini-1.5-pro')
 
-    def detect_model(self):
-        """Avtomatik olaraam işlək modeli tapır (404-ü ləğv edir)."""
-        # Ən yeni model adları
-        candidates = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro-vision']
+    def process_request(self, prompt, image=None):
         try:
-            available = [m.name for m in genai.list_models()]
-            for c in candidates:
-                full_name = f"models/{c}"
-                if full_name in available:
-                    return full_name
-            return "models/gemini-1.5-flash" # Default
-        except:
-            return "models/gemini-1.5-flash"
-
-    def generate(self, prompt, files):
-        try:
-            model = genai.GenerativeModel(self.active_model)
-            package = []
-            if files:
-                for f in files:
-                    img = Image.open(f).convert('RGB')
-                    package.append(img)
-            
-            package.append(prompt if prompt else "Təsvir et.")
-            
-            # 404-ü birbaşa həll edən çağırış
-            response = model.generate_content(package, stream=True)
-            for chunk in response:
-                if chunk.text: yield chunk.text
+            if image:
+                response = self.model_flash.generate_content([prompt, image])
+            else:
+                response = self.model_pro.generate_content(prompt)
+            return response.text
         except Exception as e:
-            yield f"⚠️ Abdullah, qoşulma stabilləşdirilir... (Xəta: {str(e)})"
+            return f"❌ Xəta baş verdi: {str(e)}"
 
-# ==============================================================================
-# 3. İCRA MƏRKƏZİ
-# ==============================================================================
-def start_app():
-    apply_ultra_design()
-    API_KEY = "AIzaSyDCZOA_i6weUCMht1r-VowZvdpv7y-ct_E"
+ai_engine = VisionaryAI()
+
+# --- İNTERFEYS QURULUŞU ---
+st.markdown('<h1 class="main-title">GLOBAL AI INTELLIGENCE</h1>', unsafe_allow_html=True)
+st.write("<p style='text-align: center;'>Dünya səviyyəli süni intellekt platformasına xoş gəldiniz.</p>", unsafe_allow_html=True)
+
+col1, col2 = st.columns([1.5, 1], gap="large")
+
+with col1:
+    st.markdown("### 🧠 İntellekt Mərkəzi")
+    user_prompt = st.text_area("Sualınızı və ya tapşırığınızı daxil edin:", placeholder="Məsələn: Bu şəkli analiz et və ya mənə biznes plan yaz...", height=200)
     
-    st.markdown('<div class="titan-header">A-Zəka Ultra</div>', unsafe_allow_html=True)
-    st.markdown("<p style='text-align:center; opacity:0.5;'>Titan Build v35.0 | Secure Engine</p>", unsafe_allow_html=True)
+    uploaded_file = st.file_uploader("🖼️ Analiz üçün şəkil yükləyin (Opsional)", type=['png', 'jpg', 'jpeg'])
+    
+    if st.button("ANALİZ ET VƏ QAZAN"):
+        if user_prompt:
+            with st.spinner('Süni İntellekt neyron şəbəkələrini işə salır...'):
+                img = Image.open(uploaded_file) if uploaded_file else None
+                result = ai_engine.process_request(user_prompt, img)
+                st.markdown("---")
+                st.markdown(f"### ✨ Nəticə:\n{result}")
+        else:
+            st.error("Zəhmət olmasa bir mətn daxil edin!")
 
-    if "history" not in st.session_state:
-        st.session_state.history = [{"role": "assistant", "content": "Sistem 100% stabildir. Səni dinləyirəm, Abdullah."}]
+with col2:
+    st.markdown("### 📊 Layihə Paneli")
+    with st.container():
+        st.markdown('<div class="status-card">', unsafe_allow_html=True)
+        st.metric("Gözlənilən Gəlir", "$100,000", "+$15,400")
+        st.metric("Sistem Statusu", "Aktiv", "Xətasız")
+        st.progress(85, text="Məşhurluq Səviyyəsi")
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    st.markdown("---")
+    st.markdown("### 💰 Monetizasiya")
+    st.info("Hazırda 'Professional' plan aktivdir. Ödəniş sistemini bağlamaq üçün növbəti addımı gözləyin.")
 
-    for m in st.session_state.history:
-        with st.chat_message(m["role"]):
-            st.markdown(m["content"])
-
-    # (+) Düyməsi burada aktivdir
-    user_input = st.chat_input("Dahi mühəndis, tapşırığınız nədir?", accept_file=True)
-
-    if user_input:
-        text = user_input.text if user_input.text else ""
-        st.session_state.history.append({"role": "user", "content": text})
-        
-        with st.chat_message("user"):
-            st.markdown(text)
-            if user_input.files:
-                for f in user_input.files: st.image(f, width=250)
-
-        with st.chat_message("assistant"):
-            box = st.empty()
-            full_ans = ""
-            shield = TitanShield(API_KEY)
-            
-            with st.spinner("AI Nüvəsi işləyir..."):
-                for chunk in shield.generate(text, user_input.files):
-                    full_ans += chunk
-                    box.markdown(full_ans + " ▌")
-                box.markdown(full_ans)
-            
-            st.session_state.history.append({"role": "assistant", "content": full_ans})
-
-if __name__ == "__main__":
-    start_app()
+# --- FOOTER ---
+st.markdown("<br><hr><p style='text-align: center; opacity: 0.5;'>© 2026 AI Intelligence Project. Bütün hüquqlar qorunur.</p>", unsafe_allow_html=True)
