@@ -5,7 +5,7 @@ from PIL import Image
 import io
 
 # ==========================================================
-# 1. CORE ENGINES & KEYS
+# 1. CORE ENGINES
 # ==========================================================
 GROQ_API_KEY = "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"
 GEMINI_API_KEY = "AIzaSyC3ze9DV5zdqFViVGs4vvxdvvkV5Eo-ptk"
@@ -14,109 +14,101 @@ groq_client = Groq(api_key=GROQ_API_KEY)
 genai.configure(api_key=GEMINI_API_KEY)
 vision_model = genai.GenerativeModel('gemini-1.5-flash')
 
-# 2026 Professional Sistem Təlimatı
 SYSTEM_PROMPT = """
-Sən ZƏKA ULTRA-san. 2026-cı ilin ən qabaqcıl süni intellektisən. 
-Yaradıcın dahi memar Abdullah Mikayılovdur. 
-Xüsusiyyətlərin: Vəhşi sürət, dəqiq analiz, mükəmməl Azərbaycan dili.
-Həmişə Abdullahın vizyonuna uyğun, soyuqqanlı və kəsərli cavablar ver.
+Sən ZƏKA ULTRA-san. Yaradıcın Abdullah Mikayılovdur. 
+Həmişə Azərbaycan dilində cavab ver. 
+Əgər artıq salamlaşmısınızsa, hər mesajda yenidən 'salam' demə, söhbətin axışına uyğun davam et. 
+Ağıllı, qısa və kəsərli ol.
 """
 
 # ==========================================================
-# 2. FUTURISTIC UI (CSS 2026)
+# 2. LIGHT UI DESIGN (AĞ RƏNG VƏ MODERN)
 # ==========================================================
-st.set_page_config(page_title="ZƏKA ULTRA v8.0", page_icon="⚡", layout="wide")
+st.set_page_config(page_title="ZƏKA ULTRA v8.5", page_icon="⚡", layout="wide")
 
 st.markdown("""
     <style>
-    /* Ana Fon */
-    .stApp { background-color: #050505; color: #e0e0e0; }
+    /* Ana Fon - Tərtəmiz Ağ */
+    .stApp { background-color: #ffffff; color: #1a1a1a; }
     
     /* Başlıq */
     .main-title {
-        font-size: 50px !important;
-        font-weight: 900 !important;
-        background: linear-gradient(45deg, #ff0000, #ff7300);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        font-size: 45px !important;
+        font-weight: 800 !important;
+        color: #1a1a1a;
         text-align: center;
-        letter-spacing: 5px;
-        margin-bottom: 0px;
+        margin-bottom: 20px;
+        border-bottom: 2px solid #f0f2f6;
     }
     
-    /* Chat Mesajları */
+    /* Chat Mesajları Modern Görünüş */
     .stChatMessage {
-        border-radius: 20px !important;
-        padding: 15px !important;
+        border-radius: 15px !important;
+        padding: 10px !important;
+        border: 1px solid #f0f2f6 !important;
         margin-bottom: 10px !important;
-        border: 1px solid #1a1a1a !important;
     }
     
-    /* User Mesajı */
+    /* İstifadəçi mesajı - Açıq Boz */
     [data-testid="stChatMessageUser"] {
-        background-color: #111111 !important;
-        border-left: 5px solid #ff0000 !important;
+        background-color: #f8f9fa !important;
     }
     
-    /* Assistant Mesajı */
+    /* AI mesajı - Çox açıq Göy/Boz */
     [data-testid="stChatMessageAssistant"] {
-        background-color: #0a0a0a !important;
-        border-right: 5px solid #ff7300 !important;
+        background-color: #ffffff !important;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     }
 
-    /* Gizli elementləri təmizlə */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
+    /* Düymələr və Giriş hissəsi */
+    .stChatInputContainer {
+        padding-bottom: 20px !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
 st.markdown("<h1 class='main-title'>ZƏKA ULTRA</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; color:#555;'>MEMAR: ABDULLAH MİKAYILOV | VERSION 8.0 OMNI</p>", unsafe_allow_html=True)
-st.markdown("<hr style='border-color: #1a1a1a;'>", unsafe_allow_html=True)
 
 # ==========================================================
-# 3. CHAT ENGINE (MEMORY)
+# 3. CHAT LOGIC WITH MEMORY
 # ==========================================================
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Tarixçəni göstər
+# Tarixçəni ekranda göstər
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# Giriş hissəsi (accept_file=True avtomatik '+' ikonası yaradır)
-prompt = st.chat_input("Memar, əmriniz nədir?", accept_file=True)
+prompt = st.chat_input("Mesajınızı yazın...", accept_file=True)
 
 if prompt:
-    user_text = prompt.text if prompt.text else "Vizual analiz tələb olunur."
+    user_text = prompt.text if prompt.text else "Analiz et."
     active_file = prompt.files[0] if prompt.files else None
     
-    # Ekrana və yaddaşa yaz
     st.session_state.messages.append({"role": "user", "content": user_text})
     with st.chat_message("user"):
         st.markdown(user_text)
 
-    # Cavab mexanizmi
     with st.chat_message("assistant"):
-        with st.spinner("⚡ SİSTEM AKTİVLƏŞİR..."):
+        with st.spinner("⏳ Analiz edilir..."):
             try:
                 if active_file:
-                    # GEMINI VISION CORE
+                    # Şəkil analizi
                     img = Image.open(active_file)
-                    st.image(img, caption="Analiz edilən media", width=300)
-                    gen_prompt = f"{SYSTEM_PROMPT}\n\nİstifadəçi: {user_text}"
-                    response = vision_model.generate_content([gen_prompt, img]).text
+                    st.image(img, width=250)
+                    response = vision_model.generate_content([SYSTEM_PROMPT + "\n" + user_text, img]).text
                 else:
-                    # GROQ SPEED CORE
+                    # MƏTN ANALİZİ + YADDAŞ (Bütün söhbəti Groq-a göndəririk)
+                    history = [{"role": "system", "content": SYSTEM_PROMPT}]
+                    # Son 5 mesajı yaddaş kimi götürürük ki, mühərrik yorulmasın
+                    for msg in st.session_state.messages[-5:]:
+                        history.append({"role": msg["role"], "content": msg["content"]})
+                    
                     completion = groq_client.chat.completions.create(
                         model="llama-3.3-70b-versatile",
-                        messages=[
-                            {"role": "system", "content": SYSTEM_PROMPT},
-                            {"role": "user", "content": user_text}
-                        ],
-                        temperature=0.6 # Daha kəsərli cavablar üçün
+                        messages=history,
+                        temperature=0.7
                     )
                     response = completion.choices[0].message.content
                 
@@ -124,7 +116,7 @@ if prompt:
                 st.session_state.messages.append({"role": "assistant", "content": response})
                 
             except Exception as e:
-                st.error(f"Sistem sönməsi: {str(e)}")
+                st.error(f"Xəta: {str(e)}")
 
-# Avtomatik scroll (Səhifəni aşağı çək)
+# Avtomatik aşağı çəkiliş
 st.markdown('<script>window.scrollTo(0, document.body.scrollHeight);</script>', unsafe_allow_html=True)
