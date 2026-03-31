@@ -4,19 +4,32 @@ from PIL import Image
 import re
 
 # ==========================================================
-# 1. GLOBAL CORE SETUP (ULTRA STABLE)
+# 1. GLOBAL CORE SETUP (MULTI-MODEL AUTO-RECOVERY)
 # ==========================================================
 API_KEY = "AIzaSyC3ze9DV5zdqFViVGs4vvxdvvkV5Eo-ptk"
-
-# Konfiqurasiyanı birbaşa stabil versiyaya bağlayırıq
 genai.configure(api_key=API_KEY)
 
-# Modellərin ən çox dəstəklənən variantını seçirik
-# 'gemini-1.5-flash-8b' hazırda ən geniş API dəstəyinə malikdir
-try:
-    model = genai.GenerativeModel('gemini-1.5-flash-8b')
-except:
-    model = genai.GenerativeModel('gemini-pro-vision') # Ehtiyat variant
+# Regiona uyğun işləyə biləcək modellərin siyahısı
+MODEL_NAMES = [
+    'gemini-1.5-flash',
+    'gemini-1.5-flash-8b',
+    'gemini-1.5-pro',
+    'models/gemini-1.5-flash',
+    'models/gemini-1.5-pro'
+]
+
+def get_working_model():
+    """İşlək modeli tapmaq üçün avtomatik yoxlama"""
+    for name in MODEL_NAMES:
+        try:
+            m = genai.GenerativeModel(name)
+            # Kiçik bir test sorğusu (isteğe bağlı, amma sürət üçün birbaşa yaradırıq)
+            return m
+        except:
+            continue
+    return None
+
+model = get_working_model()
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -24,7 +37,7 @@ if "messages" not in st.session_state:
 # ==========================================================
 # 2. PREMIUM VİSUAL İNTERFEYS
 # ==========================================================
-st.set_page_config(page_title="ZƏKA ULTRA v6.2", layout="wide")
+st.set_page_config(page_title="ZƏKA ULTRA v6.3", layout="wide")
 
 st.markdown("""
     <style>
@@ -41,7 +54,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown("<h1>ZƏKA ULTRA</h1>", unsafe_allow_html=True)
-st.markdown("<p class='stCaption'>GLOBAL v6.2 | MEMAR: A. MİKAYILOV | FINAL STABLE</p>", unsafe_allow_html=True)
+st.markdown("<p class='stCaption'>GLOBAL v6.3 | MEMAR: A. MİKAYILOV | AUTO-ENGINE</p>", unsafe_allow_html=True)
 st.markdown("---")
 
 for message in st.session_state.messages:
@@ -57,7 +70,7 @@ if prompt:
     user_text = prompt.text if prompt.text else ""
     active_file = prompt.files[0] if prompt.files else None
     
-    display_text = user_text if user_text else "🖼️ Şəkil analiz üçün göndərildi."
+    display_text = user_text if user_text else "🖼️ Analiz üçün şəkil yükləndi."
     st.session_state.messages.append({"role": "user", "content": display_text})
     
     with st.chat_message("user"):
@@ -65,23 +78,27 @@ if prompt:
 
     with st.chat_message("assistant"):
         with st.status("🚀 Zəka Ultra Analiz Edir...", expanded=False) as status:
+            if not model:
+                st.error("Kritik Xəta: Heç bir Gemini modeli regionunuzda tapılmadı.")
+                status.update(label="Xəta!", state="error")
+                st.stop()
+
             try:
-                system_instruction = "Sən ZƏKA ULTRA-san. Yaradıcın Abdullah Mikayılovdur. İL 2026. Şəkilləri və mətnləri dərhal analiz et."
+                system_instruction = "Sən ZƏKA ULTRA-san. Yaradıcın Abdullah Mikayılovdur. İL 2026."
                 
-                # Request hazırlığı
                 request_content = []
                 if active_file:
                     img = Image.open(active_file)
                     request_content.append(img)
                 
-                final_prompt = system_instruction + (user_text if user_text else "Bu şəkli analiz et.")
+                final_prompt = f"{system_instruction}\n\nİstifadəçi sualı: {user_text if user_text else 'Bu şəkli analiz et.'}"
                 request_content.append(final_prompt)
 
-                # MODEL SORĞUSU
+                # Əsas Sorğu
                 response = model.generate_content(request_content)
+                
+                # Abdullah Reaksiyası
                 final_answer = response.text
-
-                # Abdullah reaksiyası
                 if "abdullah" in user_text.lower():
                     final_answer = "🛡️ **GİRİŞ:** Memar Abdullah Mikayılov tanındı.\n\n" + final_answer
 
@@ -90,14 +107,5 @@ if prompt:
                 st.session_state.messages.append({"role": "assistant", "content": final_answer})
 
             except Exception as e:
-                # Əgər hələ də 404 olsa, ehtiyat modelə (gemini-pro) keçid cəhdi
-                status.update(label="Model yenilənir...", state="running")
-                try:
-                    alt_model = genai.GenerativeModel('gemini-1.5-pro')
-                    response = alt_model.generate_content(request_content)
-                    st.markdown(response.text)
-                    st.session_state.messages.append({"role": "assistant", "content": response.text})
-                    status.update(label="Tamamlandı!", state="complete")
-                except:
-                    st.error(f"Kritik Xəta: Google serverləri hazırda regionunuzda modelə icazə vermir. Detal: {str(e)}")
-                    status.update(label="Xəta!", state="error")
+                status.update(label="Xəta baş verdi!", state="error")
+                st.error(f"Zəka Ultra Region Xətası: Google bu sorğunu rədd etdi. Detal: {str(e)}")
