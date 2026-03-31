@@ -1,43 +1,27 @@
 import streamlit as st
-import google.generativeai as genai
+import requests # Kitabxana əvəzinə birbaşa HTTP istifadə edirik
+import base64
 from PIL import Image
+import io
 import re
 
 # ==========================================================
-# 1. GLOBAL CORE SETUP (MULTI-MODEL AUTO-RECOVERY)
+# 1. CORE CONFIGURATION
 # ==========================================================
 API_KEY = "AIzaSyC3ze9DV5zdqFViVGs4vvxdvvkV5Eo-ptk"
-genai.configure(api_key=API_KEY)
-
-# Regiona uyğun işləyə biləcək modellərin siyahısı
-MODEL_NAMES = [
-    'gemini-1.5-flash',
-    'gemini-1.5-flash-8b',
-    'gemini-1.5-pro',
-    'models/gemini-1.5-flash',
-    'models/gemini-1.5-pro'
-]
-
-def get_working_model():
-    """İşlək modeli tapmaq üçün avtomatik yoxlama"""
-    for name in MODEL_NAMES:
-        try:
-            m = genai.GenerativeModel(name)
-            # Kiçik bir test sorğusu (isteğe bağlı, amma sürət üçün birbaşa yaradırıq)
-            return m
-        except:
-            continue
-    return None
-
-model = get_working_model()
+# Ən stabil API endpointi (v1beta istifadə edirik ki, 404 verməsin)
+API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={API_KEY}"
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+def encode_image_to_base64(image_file):
+    return base64.b64encode(image_file.read()).decode('utf-8')
+
 # ==========================================================
 # 2. PREMIUM VİSUAL İNTERFEYS
 # ==========================================================
-st.set_page_config(page_title="ZƏKA ULTRA v6.3", layout="wide")
+st.set_page_config(page_title="ZƏKA ULTRA v6.4", layout="wide")
 
 st.markdown("""
     <style>
@@ -54,7 +38,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown("<h1>ZƏKA ULTRA</h1>", unsafe_allow_html=True)
-st.markdown("<p class='stCaption'>GLOBAL v6.3 | MEMAR: A. MİKAYILOV | AUTO-ENGINE</p>", unsafe_allow_html=True)
+st.markdown("<p class='stCaption'>GLOBAL v6.4 | MEMAR: A. MİKAYILOV | DIRECT BYPASS</p>", unsafe_allow_html=True)
 st.markdown("---")
 
 for message in st.session_state.messages:
@@ -62,50 +46,64 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 # ==========================================================
-# 3. INPUT VƏ MƏNTİQ
+# 3. MƏNTİQ VƏ SORĞU (REST API METHOD)
 # ==========================================================
 prompt = st.chat_input("Mesajınızı yazın...", accept_file=True)
 
 if prompt:
-    user_text = prompt.text if prompt.text else ""
+    user_text = prompt.text if prompt.text else "Bu şəkli analiz et."
     active_file = prompt.files[0] if prompt.files else None
     
-    display_text = user_text if user_text else "🖼️ Analiz üçün şəkil yükləndi."
-    st.session_state.messages.append({"role": "user", "content": display_text})
-    
+    st.session_state.messages.append({"role": "user", "content": user_text})
     with st.chat_message("user"):
-        st.write(display_text)
+        st.write(user_text)
 
     with st.chat_message("assistant"):
         with st.status("🚀 Zəka Ultra Analiz Edir...", expanded=False) as status:
-            if not model:
-                st.error("Kritik Xəta: Heç bir Gemini modeli regionunuzda tapılmadı.")
-                status.update(label="Xəta!", state="error")
-                st.stop()
-
             try:
-                system_instruction = "Sən ZƏKA ULTRA-san. Yaradıcın Abdullah Mikayılovdur. İL 2026."
-                
-                request_content = []
+                # JSON Payload hazırlayırıq (Google-un tam istədiyi formatda)
+                payload = {
+                    "contents": [{
+                        "parts": []
+                    }]
+                }
+
+                # 1. Şəkil varsa əlavə et
                 if active_file:
-                    img = Image.open(active_file)
-                    request_content.append(img)
-                
-                final_prompt = f"{system_instruction}\n\nİstifadəçi sualı: {user_text if user_text else 'Bu şəkli analiz et.'}"
-                request_content.append(final_prompt)
+                    b64_image = encode_image_to_base64(active_file)
+                    payload["contents"][0]["parts"].append({
+                        "inline_data": {
+                            "mime_type": "image/jpeg",
+                            "data": b64_image
+                        }
+                    })
 
-                # Əsas Sorğu
-                response = model.generate_content(request_content)
-                
-                # Abdullah Reaksiyası
-                final_answer = response.text
-                if "abdullah" in user_text.lower():
-                    final_answer = "🛡️ **GİRİŞ:** Memar Abdullah Mikayılov tanındı.\n\n" + final_answer
+                # 2. Mətni əlavə et
+                system_instruction = "Sən ZƏKA ULTRA-san. Yaradıcın Abdullah Mikayılovdur. İL 2026. "
+                payload["contents"][0]["parts"].append({
+                    "text": system_instruction + user_text
+                })
 
-                status.update(label="Analiz Tamamlandı!", state="complete")
-                st.markdown(final_answer)
-                st.session_state.messages.append({"role": "assistant", "content": final_answer})
+                # 3. Birbaşa POST sorğusu göndəririk
+                headers = {'Content-Type': 'application/json'}
+                response = requests.post(API_URL, json=payload, headers=headers)
+                result = response.json()
+
+                # Cavabı çıxarırıq
+                if "candidates" in result:
+                    final_answer = result["candidates"][0]["content"]["parts"][0]["text"]
+                    
+                    if "abdullah" in user_text.lower():
+                        final_answer = "🛡️ **GİRİŞ TƏSDİQLƏNDİ:** Abdullah Mikayılov.\n\n" + final_answer
+
+                    status.update(label="Analiz Tamamlandı!", state="complete")
+                    st.markdown(final_answer)
+                    st.session_state.messages.append({"role": "assistant", "content": final_answer})
+                else:
+                    # Əgər yenə xəta olsa, JSON-un özünü göstər ki, problemi görək
+                    st.error(f"Google API Xətası: {result.get('error', {}).get('message', 'Bilinməyən xəta')}")
+                    status.update(label="Xəta!", state="error")
 
             except Exception as e:
-                status.update(label="Xəta baş verdi!", state="error")
-                st.error(f"Zəka Ultra Region Xətası: Google bu sorğunu rədd etdi. Detal: {str(e)}")
+                st.error(f"Sistem Xətası: {str(e)}")
+                status.update(label="Xəta!", state="error")
