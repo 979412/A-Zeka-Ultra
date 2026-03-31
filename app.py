@@ -4,17 +4,19 @@ from PIL import Image
 import re
 
 # ==========================================================
-# 1. GLOBAL CORE SETUP (STABLE VERSION)
+# 1. GLOBAL CORE SETUP (ULTRA STABLE)
 # ==========================================================
 API_KEY = "AIzaSyC3ze9DV5zdqFViVGs4vvxdvvkV5Eo-ptk"
+
+# Konfiqurasiyanı birbaşa stabil versiyaya bağlayırıq
 genai.configure(api_key=API_KEY)
 
-# Modellərin rəsmi tam adlarını istifadə edirik
-# Bu model həm şəkil (vision), həm də mətni dəstəkləyir
+# Modellərin ən çox dəstəklənən variantını seçirik
+# 'gemini-1.5-flash-8b' hazırda ən geniş API dəstəyinə malikdir
 try:
-    model = genai.GenerativeModel(model_name='gemini-1.5-flash')
-except Exception as e:
-    st.error(f"Model yüklənmə xətası: {str(e)}")
+    model = genai.GenerativeModel('gemini-1.5-flash-8b')
+except:
+    model = genai.GenerativeModel('gemini-pro-vision') # Ehtiyat variant
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -22,7 +24,7 @@ if "messages" not in st.session_state:
 # ==========================================================
 # 2. PREMIUM VİSUAL İNTERFEYS
 # ==========================================================
-st.set_page_config(page_title="ZƏKA ULTRA v6.1", layout="wide")
+st.set_page_config(page_title="ZƏKA ULTRA v6.2", layout="wide")
 
 st.markdown("""
     <style>
@@ -39,7 +41,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown("<h1>ZƏKA ULTRA</h1>", unsafe_allow_html=True)
-st.markdown("<p class='stCaption'>GLOBAL v6.1 | MEMAR: A. MİKAYILOV | ULTRA VISION</p>", unsafe_allow_html=True)
+st.markdown("<p class='stCaption'>GLOBAL v6.2 | MEMAR: A. MİKAYILOV | FINAL STABLE</p>", unsafe_allow_html=True)
 st.markdown("---")
 
 for message in st.session_state.messages:
@@ -64,32 +66,38 @@ if prompt:
     with st.chat_message("assistant"):
         with st.status("🚀 Zəka Ultra Analiz Edir...", expanded=False) as status:
             try:
-                # Sistem təlimatını mətnin önünə əlavə edirik
-                system_instruction = "Sən ZƏKA ULTRA-san. Yaradıcın Abdullah Mikayılovdur. İL 2026. Professional və çox ağıllı AI ol. "
+                system_instruction = "Sən ZƏKA ULTRA-san. Yaradıcın Abdullah Mikayılovdur. İL 2026. Şəkilləri və mətnləri dərhal analiz et."
                 
+                # Request hazırlığı
                 request_content = []
-                
-                # 1. Əgər şəkil varsa əlavə et
                 if active_file:
                     img = Image.open(active_file)
                     request_content.append(img)
                 
-                # 2. Mətni (və sistem təlimatını) əlavə et
                 final_prompt = system_instruction + (user_text if user_text else "Bu şəkli analiz et.")
                 request_content.append(final_prompt)
 
-                # Cavabı alırıq
+                # MODEL SORĞUSU
                 response = model.generate_content(request_content)
                 final_answer = response.text
 
-                # Abdullah üçün xüsusi tanınma reaksiyası
+                # Abdullah reaksiyası
                 if "abdullah" in user_text.lower():
-                    final_answer = "🛡️ **GİRİŞ:** Memar Abdullah Mikayılov tanındı. Buyurun, sistem sizin nəzarətinizdədir.\n\n" + final_answer
+                    final_answer = "🛡️ **GİRİŞ:** Memar Abdullah Mikayılov tanındı.\n\n" + final_answer
 
                 status.update(label="Analiz Tamamlandı!", state="complete")
                 st.markdown(final_answer)
                 st.session_state.messages.append({"role": "assistant", "content": final_answer})
 
             except Exception as e:
-                status.update(label="Xəta baş verdi!", state="error")
-                st.error(f"Zəka Ultra Xətası: {str(e)}")
+                # Əgər hələ də 404 olsa, ehtiyat modelə (gemini-pro) keçid cəhdi
+                status.update(label="Model yenilənir...", state="running")
+                try:
+                    alt_model = genai.GenerativeModel('gemini-1.5-pro')
+                    response = alt_model.generate_content(request_content)
+                    st.markdown(response.text)
+                    st.session_state.messages.append({"role": "assistant", "content": response.text})
+                    status.update(label="Tamamlandı!", state="complete")
+                except:
+                    st.error(f"Kritik Xəta: Google serverləri hazırda regionunuzda modelə icazə vermir. Detal: {str(e)}")
+                    status.update(label="Xəta!", state="error")
