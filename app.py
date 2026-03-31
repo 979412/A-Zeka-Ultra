@@ -17,15 +17,21 @@ groq_client = Groq(api_key=GROQ_API_KEY)
 genai.configure(api_key=GEMINI_API_KEY)
 vision_model = genai.GenerativeModel('gemini-1.5-flash')
 
-st.set_page_config(page_title="ZƏKA ULTRA v7.1", layout="wide")
+# 📜 SİSTEM TƏLİMATI: AI-nin şəxsiyyətini burada təyin edirik
+SYSTEM_PROMPT = """
+Sən ZƏKA ULTRA-san. Yaradıcın Abdullah Mikayılovdur. İL 2026. 
+Həmişə Azərbaycan dilində, aydın və professional cavab ver. 
+Əgər kimsə səndən kim olduğunu soruşsa, yaradıcının Abdullah olduğunu fəxrlə vurğula.
+"""
+
+st.set_page_config(page_title="ZƏKA ULTRA v7.2", layout="wide")
 st.markdown("<h1 style='text-align: center;'>ZƏKA ULTRA</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center;'>HİBRİD MÜHƏRRİK: Groq + Gemini</p>", unsafe_allow_html=True)
 
-# 🧠 YADDAŞ SİSTEMİ: Köhnə mesajların silinməməsi üçün
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Mesajları ekrana yazdır (Hər dəfə yenilənəndə köhnələr qalsın)
+# Mesaj tarixçəsini ekranda saxla
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
@@ -39,32 +45,32 @@ if prompt:
     user_text = prompt.text if prompt.text else "Analiz et."
     active_file = prompt.files[0] if prompt.files else None
     
-    # İstifadəçi mesajını yaddaşa əlavə et və ekrana yaz
     st.session_state.messages.append({"role": "user", "content": user_text})
     with st.chat_message("user"):
         st.write(user_text)
 
-    # Süni İntellektin cavabı
     with st.chat_message("assistant"):
-        # Status yalnız emal gedəndə görünsün
         with st.spinner("🚀 Zəka Ultra düşünür..."):
             try:
                 if active_file:
-                    # ŞƏKİL ANALİZİ (Gemini)
+                    # ŞƏKİL ANALİZİ (Gemini) + Sistem Təlimatı
                     img = Image.open(active_file)
-                    response = vision_model.generate_content([user_text, img]).text
+                    # Gemini-yə həm şəkli, həm təlimatı, həm də istifadəçinin sualını veririk
+                    full_prompt = f"{SYSTEM_PROMPT}\n\nİstifadəçinin sualı: {user_text}"
+                    response = vision_model.generate_content([full_prompt, img]).text
                 else:
-                    # MƏTN ANALİZİ (Groq)
+                    # MƏTN ANALİZİ (Groq) + Sistem Təlimatı
                     completion = groq_client.chat.completions.create(
                         model="llama-3.3-70b-versatile",
-                        messages=[{"role": "user", "content": user_text}]
+                        messages=[
+                            {"role": "system", "content": SYSTEM_PROMPT}, # Groq üçün sistem rolu
+                            {"role": "user", "content": user_text}
+                        ]
                     )
                     response = completion.choices[0].message.content
                 
-                # 🎯 CAVABI BİRBAŞA AÇIQ GÖSTƏRİRİK (Statusun içində deyil!)
+                # Cavabı birbaşa göstər
                 st.markdown(response)
-                
-                # Cavabı yaddaşa əlavə et ki, növbəti mesajda silinməsin
                 st.session_state.messages.append({"role": "assistant", "content": response})
                 
             except Exception as e:
