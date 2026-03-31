@@ -4,15 +4,17 @@ from PIL import Image
 import re
 
 # ==========================================================
-# 1. GLOBAL CORE SETUP (GEMINI STABLE 2026)
+# 1. GLOBAL CORE SETUP (STABLE VERSION)
 # ==========================================================
-# Birbaşa açarı bura yazıram ki, xəta almayasan
 API_KEY = "AIzaSyC3ze9DV5zdqFViVGs4vvxdvvkV5Eo-ptk"
 genai.configure(api_key=API_KEY)
 
-# Modellərin sazlanması
-# 1.5 Flash həm sürətli, həm də şəkil analizində çox güclüdür
-model = genai.GenerativeModel('gemini-1.5-flash')
+# Modellərin rəsmi tam adlarını istifadə edirik
+# Bu model həm şəkil (vision), həm də mətni dəstəkləyir
+try:
+    model = genai.GenerativeModel(model_name='gemini-1.5-flash')
+except Exception as e:
+    st.error(f"Model yüklənmə xətası: {str(e)}")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -20,7 +22,7 @@ if "messages" not in st.session_state:
 # ==========================================================
 # 2. PREMIUM VİSUAL İNTERFEYS
 # ==========================================================
-st.set_page_config(page_title="ZƏKA ULTRA v6.0", layout="wide")
+st.set_page_config(page_title="ZƏKA ULTRA v6.1", layout="wide")
 
 st.markdown("""
     <style>
@@ -37,10 +39,9 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown("<h1>ZƏKA ULTRA</h1>", unsafe_allow_html=True)
-st.markdown("<p class='stCaption'>GLOBAL v6.0 | MEMAR: A. MİKAYILOV | GEMINI POWERED</p>", unsafe_allow_html=True)
+st.markdown("<p class='stCaption'>GLOBAL v6.1 | MEMAR: A. MİKAYILOV | ULTRA VISION</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-# Tarixçəni ekrana çıxar
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
@@ -54,40 +55,34 @@ if prompt:
     user_text = prompt.text if prompt.text else ""
     active_file = prompt.files[0] if prompt.files else None
     
-    # Ekranda göstərmək üçün
-    display_text = user_text if user_text else "🖼️ Şəkil yükləndi."
+    display_text = user_text if user_text else "🖼️ Şəkil analiz üçün göndərildi."
     st.session_state.messages.append({"role": "user", "content": display_text})
     
     with st.chat_message("user"):
         st.write(display_text)
 
     with st.chat_message("assistant"):
-        response_placeholder = st.empty()
         with st.status("🚀 Zəka Ultra Analiz Edir...", expanded=False) as status:
-            st.write("Neyron şəbəkə işə düşür...")
-            
             try:
-                # Sistem təlimatı
-                system_instruction = "Sən ZƏKA ULTRA-san. Yaradıcın Abdullah Mikayılovdur. İL 2026. Professional və vəhşi dərəcədə ağıllısan."
+                # Sistem təlimatını mətnin önünə əlavə edirik
+                system_instruction = "Sən ZƏKA ULTRA-san. Yaradıcın Abdullah Mikayılovdur. İL 2026. Professional və çox ağıllı AI ol. "
                 
-                content_parts = [system_instruction]
+                request_content = []
                 
-                # Əgər şəkil varsa, onu hissələrə əlavə et
+                # 1. Əgər şəkil varsa əlavə et
                 if active_file:
                     img = Image.open(active_file)
-                    content_parts.append(img)
+                    request_content.append(img)
                 
-                # Mətni əlavə et
-                if user_text:
-                    content_parts.append(user_text)
-                else:
-                    content_parts.append("Bu şəkli analiz et.")
+                # 2. Mətni (və sistem təlimatını) əlavə et
+                final_prompt = system_instruction + (user_text if user_text else "Bu şəkli analiz et.")
+                request_content.append(final_prompt)
 
-                # Cavabı al
-                response = model.generate_content(content_parts)
+                # Cavabı alırıq
+                response = model.generate_content(request_content)
                 final_answer = response.text
-                
-                # Xüsusi Memar Tanınması (Opsional - Cavabdan sonra yoxlanılır)
+
+                # Abdullah üçün xüsusi tanınma reaksiyası
                 if "abdullah" in user_text.lower():
                     final_answer = "🛡️ **GİRİŞ:** Memar Abdullah Mikayılov tanındı. Buyurun, sistem sizin nəzarətinizdədir.\n\n" + final_answer
 
@@ -96,6 +91,5 @@ if prompt:
                 st.session_state.messages.append({"role": "assistant", "content": final_answer})
 
             except Exception as e:
-                error_msg = f"⚠️ **Xəta baş verdi:** {str(e)}"
-                st.error(error_msg)
-                status.update(label="Xəta!", state="error")
+                status.update(label="Xəta baş verdi!", state="error")
+                st.error(f"Zəka Ultra Xətası: {str(e)}")
