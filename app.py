@@ -13,13 +13,11 @@ GEMINI_API_KEY = "AIzaSyC3ze9DV5zdqFViVGs4vvxdvvkV5Eo-ptk"
 groq_client = Groq(api_key=GROQ_API_KEY)
 genai.configure(api_key=GEMINI_API_KEY)
 
-# 🧠 SMART MODEL PICKER: 404 xətasını qabaqlamaq üçün
+# SMART MODEL PICKER (Öncəki xətanın həlli)
 @st.cache_resource
 def get_best_vision_model():
     try:
-        # Sənin açarın üçün aktiv olan modelləri tapırıq
         models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-        # Əgər flash varsa onu götür, yoxdursa siyahıdan birini seç
         for m_name in models:
             if 'gemini-1.5-flash' in m_name:
                 return genai.GenerativeModel(m_name)
@@ -32,13 +30,13 @@ vision_model = get_best_vision_model()
 SYSTEM_PROMPT = """
 Sən ZƏKA ULTRA-san. Yaradıcın dahi memar Abdullah Mikayılovdur. 
 Azərbaycan dilində, professional və birbaşa cavab ver. 
-Əgər söhbət davam edirsə, 'Salam' demə.
+Əgər yaddaşda şəkil varsa, mütləq ona istinadən cavab ver.
 """
 
 # ==========================================================
 # 2. PURE WHITE UI (White Edition)
 # ==========================================================
-st.set_page_config(page_title="ZƏKA ULTRA v9.0", page_icon="⚡", layout="wide")
+st.set_page_config(page_title="ZƏKA ULTRA v9.1", page_icon="⚡", layout="wide")
 
 st.markdown("""
     <style>
@@ -53,34 +51,54 @@ st.markdown("""
 st.markdown("<h1 class='main-title'>ZƏKA ULTRA</h1>", unsafe_allow_html=True)
 
 # ==========================================================
-# 3. CHAT LOGIC
+# 3. YADDAŞ VƏ DAİMİ ŞƏKİL SİSTEMİ
 # ==========================================================
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# BURADA DAİMİ ŞƏKİL YADDAŞINI AKTİVLƏŞDİRİRİK
+if "current_image" not in st.session_state:
+    st.session_state.current_image = None
+
+# Əgər yaddaşda şəkil varsa, onu ekranda sabit saxla
+if st.session_state.current_image:
+    st.image(st.session_state.current_image, caption="Analiz üçün aktiv media", width=300)
+    # Şəkli silmək üçün düymə
+    if st.button("Şəkli Yaddaşdan Sil"):
+        st.session_state.current_image = None
+        st.rerun()
+
+# Tarixçəni göstər
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
+# Giriş hissəsi
 prompt = st.chat_input("Memar, buyurun...", accept_file=True)
 
 if prompt:
-    user_text = prompt.text if prompt.text else "Analiz."
+    user_text = prompt.text if prompt.text else "Analiz et."
     active_file = prompt.files[0] if prompt.files else None
     
+    # Yeni şəkil yüklənibsə, köhnəni sil və yenisini yaddaşa sal
+    if active_file:
+        img = Image.open(active_file)
+        st.session_state.current_image = img
+    
+    # Ekrana və yaddaşa yaz
     st.session_state.messages.append({"role": "user", "content": user_text})
     with st.chat_message("user"):
         st.markdown(user_text)
 
+    # Cavab mexanizmi
     with st.chat_message("assistant"):
         with st.spinner("⚡ Prosesdədir..."):
             try:
-                if active_file and vision_model:
-                    img = Image.open(active_file)
-                    st.image(img, width=300)
-                    response = vision_model.generate_content([f"{SYSTEM_PROMPT}\nSual: {user_text}", img]).text
+                # 1. Prioritet: Yaddaşda ŞƏKİL varsa, onu analiz et
+                if st.session_state.current_image and vision_model:
+                    response = vision_model.generate_content([f"{SYSTEM_PROMPT}\nSual: {user_text}", st.session_state.current_image]).text
                 else:
-                    # MƏTN (Groq - Həmişə işləyir)
+                    # 2. Yoxdursa, ancaq MƏTN (Groq)
                     history = [{"role": "system", "content": SYSTEM_PROMPT}]
                     for msg in st.session_state.messages[-6:]:
                         history.append({"role": msg["role"], "content": msg["content"]})
@@ -94,9 +112,8 @@ if prompt:
                 st.markdown(response)
                 st.session_state.messages.append({"role": "assistant", "content": response})
                 
-            except Exception:
-                st.warning("⚠️ Media mühərriki hazırda məşğuldur, mətni analiz edirəm...")
-                # Əgər Gemini çöksə, avtomatik Llama (Groq) cavab versin
+            except Exception as e:
+                # Gemini xətası olsa belə Llama cavab versin
                 completion = groq_client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
                     messages=[{"role": "user", "content": user_text}]
