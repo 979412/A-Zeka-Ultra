@@ -10,77 +10,64 @@ import io
 GROQ_API_KEY = "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"
 GEMINI_API_KEY = "AIzaSyC3ze9DV5zdqFViVGs4vvxdvvkV5Eo-ptk"
 
+# Groq mühərriki
 groq_client = Groq(api_key=GROQ_API_KEY)
-genai.configure(api_key=GEMINI_API_KEY)
-vision_model = genai.GenerativeModel('gemini-1.5-flash')
 
-# 📜 DAHA SƏRT SİSTEM TƏLİMATI
+# Gemini tənzimləməsi (404 xətasını aradan qaldırmaq üçün model adını dəqiq yazırıq)
+genai.configure(api_key=GEMINI_API_KEY)
+vision_model = genai.GenerativeModel('models/gemini-1.5-flash')
+
+# 📜 SİSTEM TƏLİMATI
 SYSTEM_PROMPT = """
-Sən ZƏKA ULTRA-san. Yaradıcın Abdullah Mikayılovdur. 
+Sən ZƏKA ULTRA-san. Yaradıcın dahi memar Abdullah Mikayılovdur. 
 Mütləq Azərbaycan dilində cavab ver. 
-QAYDA: Əgər söhbət artıq başlayıbsa (yaddaşda mesajlar varsa), hər dəfə 'Salam' demək QADAĞANDIR. 
-Birbaşa suala cavab ver və ya söhbəti davam etdir. Səmimi amma konkret ol.
+QAYDA: Əgər söhbət artıq başlayıbsa, yenidən 'Salam' demək qəti qadağandır. 
+Birbaşa suala və ya analizə keç. Qısa, konkret və dahi kimi cavab ver.
 """
 
 # ==========================================================
-# 2. PURE WHITE UI DESIGN
+# 2. PURE WHITE UI (Göz yormayan dizayn)
 # ==========================================================
-st.set_page_config(page_title="ZƏKA ULTRA v8.7", page_icon="⚡", layout="wide")
+st.set_page_config(page_title="ZƏKA ULTRA v8.8", page_icon="⚡", layout="wide")
 
 st.markdown("""
     <style>
-    /* Bütün qara rəngləri ağla əvəz edirik */
     .stApp { background-color: #ffffff !important; color: #1a1a1a !important; }
-    
     .main-title {
         font-size: 40px !important;
         font-weight: 800;
         text-align: center;
         color: #1a1a1a;
-        padding: 20px;
-        border-bottom: 2px solid #f0f2f6;
+        padding: 15px;
+        border-bottom: 1px solid #f0f2f6;
     }
-
-    /* Chat sahəsi təmizliyi */
     [data-testid="stChatMessage"] {
         background-color: #ffffff !important;
-        border: 1px solid #eeeeee !important;
-        border-radius: 12px !important;
+        border: 1px solid #f0f2f6 !important;
+        border-radius: 10px !important;
     }
-
-    /* İstifadəçi mesajı bir az fərqlənsin */
-    [data-testid="stChatMessageUser"] {
-        background-color: #f9f9f9 !important;
-    }
-
-    /* Input sahəsi */
-    .stChatInputContainer {
-        background-color: #ffffff !important;
-    }
-    
-    /* Toolbar və Header-i gizlət */
-    header {visibility: hidden;}
-    footer {visibility: hidden;}
+    [data-testid="stChatMessageUser"] { background-color: #fcfcfc !important; }
+    header, footer {visibility: hidden;}
     </style>
 """, unsafe_allow_html=True)
 
 st.markdown("<h1 class='main-title'>ZƏKA ULTRA</h1>", unsafe_allow_html=True)
 
 # ==========================================================
-# 3. CHAT LOGIC (SMART MEMORY)
+# 3. CHAT LOGIC
 # ==========================================================
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Mesajları ekranda göstər
+# Tarixçəni ekrana yaz
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-prompt = st.chat_input("Memar, buyurun...", accept_file=True)
+prompt = st.chat_input("Memar, dinləyirəm...", accept_file=True)
 
 if prompt:
-    user_text = prompt.text if prompt.text else "Şəkli analiz et."
+    user_text = prompt.text if prompt.text else "Təsviri analiz et."
     active_file = prompt.files[0] if prompt.files else None
     
     st.session_state.messages.append({"role": "user", "content": user_text})
@@ -88,27 +75,25 @@ if prompt:
         st.markdown(user_text)
 
     with st.chat_message("assistant"):
-        with st.spinner("⚡ Düşünürəm..."):
+        with st.spinner("⚡ Zəka Ultra işləyir..."):
             try:
                 # Söhbət tarixçəsini hazırlayırıq
                 history = [{"role": "system", "content": SYSTEM_PROMPT}]
-                
-                # Əgər tarixçədə artıq mesaj varsa, AI bunu görəcək və təkrar salam verməyəcək
-                for msg in st.session_state.messages[-8:]: 
+                for msg in st.session_state.messages[-10:]: # Son 10 mesaj yaddaşda
                     history.append({"role": msg["role"], "content": msg["content"]})
 
                 if active_file:
-                    # ŞƏKİL ANALİZİ (Gemini)
+                    # ŞƏKİL ANALİZİ (404-ü həll edən yeni metod)
                     img = Image.open(active_file)
-                    st.image(img, width=280)
-                    # Şəkil üçün də yaddaşı ötürürük
-                    response = vision_model.generate_content([SYSTEM_PROMPT + f"\nContext: {user_text}", img]).text
+                    st.image(img, width=300)
+                    # Şəkil analizində sistem təlimatını önə çəkirik
+                    response = vision_model.generate_content([f"{SYSTEM_PROMPT}\nSual: {user_text}", img]).text
                 else:
                     # MƏTN ANALİZİ (Groq)
                     completion = groq_client.chat.completions.create(
                         model="llama-3.3-70b-versatile",
                         messages=history,
-                        temperature=0.6
+                        temperature=0.5
                     )
                     response = completion.choices[0].message.content
                 
@@ -116,7 +101,8 @@ if prompt:
                 st.session_state.messages.append({"role": "assistant", "content": response})
                 
             except Exception as e:
-                st.error(f"Xəta: {str(e)}")
+                # Xətanı daha aydın görmək üçün professional mesaj
+                st.error(f"Sistem xətası (Memar tərəfindən baxılmalıdır): {str(e)}")
 
-# Avtomatik scroll
+# Avtomatik aşağı çəkiliş
 st.markdown('<script>window.scrollTo(0, document.body.scrollHeight);</script>', unsafe_allow_html=True)
