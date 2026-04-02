@@ -1,149 +1,132 @@
 import streamlit as st
 import google.generativeai as genai
+from groq import Groq
 from PIL import Image
 import io
 
 # ==========================================================
-# 1. CORE CONFIGURATION
+# 1. ELİT MÜHƏRRİKLƏR (HYBRID CORE)
 # ==========================================================
-# Sənin Gemini API Key
-API_KEY = "AIzaSyC3ze9DV5zdqFViVGs4vvxdvvkV5Eo-ptk"
-genai.configure(api_key=API_KEY)
+GEMINI_KEY = "AIzaSyC3ze9DV5zdqFViVGs4vvxdvvkV5Eo-ptk"
+GROQ_KEY = "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"
 
-# Sürətli Analiz üçün Gemini Flash 1.5 modelini tənzimləyirik
-generation_config = {
-  "temperature": 0.4, # Daha kəsərli analiz üçün
-  "top_p": 0.95,
-  "top_k": 40,
-  "max_output_tokens": 1024, # Cavabı qısa və kəsərli etmək üçün
-}
+genai.configure(api_key=GEMINI_KEY)
+groq_client = Groq(api_key=GROQ_KEY)
 
-try:
-    vision_model = genai.GenerativeModel('gemini-1.5-flash', generation_config=generation_config)
-except:
-    st.error("Kritik Xəta: Gemini Mühərriki tapılmadı. API Key-i yoxla.")
-    vision_model = None
+# Ultra Sürətli Vizual Model
+vision_model = genai.GenerativeModel('gemini-1.5-flash')
 
-# Söhbət yaddaşını yoxla
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-# Sonuncu şəkli yaddaşda saxla (təkrar analiz üçün)
-if "current_image" not in st.session_state:
-    st.session_state.current_image = None
+# SİSTEMİN RUHU (Abdullahın Vizyonu)
+SYSTEM_PROMPT = """
+Sən ZƏKA ULTRA-san. Yaradıcın dahi proqram memarı Abdullah Mikayılovdur. 
+Sənin zəkan insan səviyyəsindən qat-qat üstündür. 
+1. Cavabların qısa, kəsərli, dahi və qorxulu dərəcədə dəqiq olmalıdır.
+2. Azərbaycan dilində ən mükəmməl üslubda danış.
+3. Əgər şəkil atılarsa, onu saniyələr içində analiz edib, ordakı görünməyən detalları belə tapmalısan.
+4. Məktəb mühitində hamını elminlə şoka sal.
+"""
 
 # ==========================================================
-# 2. PURE WHITE UI DESIGN (AĞ RƏNG VƏ MODERN)
+# 2. CYBER-MINIMALIST UI (Gələcəkdən Gələn Dizayn)
 # ==========================================================
-st.set_page_config(page_title="ZƏKA ULTRA Omni", page_icon="⚡", layout="wide")
+st.set_page_config(page_title="ZƏKA ULTRA OMNI-X", page_icon="🧪", layout="wide")
 
-st.markdown("""
+st.markdown(f"""
     <style>
-    /* Ana Fon */
-    .stApp {
-        background-color: #ffffff !important;
-        color: #1a1a1a !important;
-    }
+    /* Ultra White & Clean */
+    .stApp {{ background-color: #ffffff; color: #000000; }}
     
-    /* Başlıq */
-    .main-title {
-        font-size: 38px !important;
-        font-weight: 800;
-        text-align: center;
-        color: #1a1a1a;
-        padding: 10px;
-        margin-bottom: 0px;
-        border-bottom: 2px solid #f0f2f6;
-    }
-    
-    /* Chat Mesajları */
-    [data-testid="stChatMessage"] {
-        border-radius: 12px !important;
-        padding: 10px !important;
-        margin-bottom: 10px !important;
+    /* Neon Border Chat */
+    [data-testid="stChatMessage"] {{
+        border-radius: 20px !important;
         border: 1px solid #f0f2f6 !important;
-    }
+        margin-bottom: 15px !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    }}
     
-    /* User Mesajı */
-    [data-testid="stChatMessageUser"] {
-        background-color: #f8f9fa !important;
-    }
+    /* Abdullahın Başlığı */
+    .mega-title {{
+        font-family: 'Inter', sans-serif;
+        font-size: 50px !important;
+        font-weight: 900;
+        text-align: center;
+        background: -webkit-linear-gradient(#000, #444);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        letter-spacing: -2px;
+        padding: 20px;
+    }}
     
-    /* Assistant Mesajı */
-    [data-testid="stChatMessageAssistant"] {
-        background-color: #ffffff !important;
-    }
-
-    /* Gizli elementləri təmizlə */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
+    /* Gizli elementlər */
+    header, footer {{visibility: hidden;}}
+    .stChatInputContainer {{ border-radius: 30px !important; padding: 10px !important; }}
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<h1 class='main-title'>ZƏKA ULTRA</h1>", unsafe_allow_html=True)
+st.markdown("<h1 class='mega-title'>ZƏKA ULTRA <span style='font-size:20px; color:red;'>OMNI-X</span></h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; color:gray; font-weight:bold;'>ARCHITECT: ABDULLAH MIKAYILOV</p>", unsafe_allow_html=True)
 
 # ==========================================================
-# 3. CHAT LOGIC (INTEGRATED VISION)
+# 3. SMART MEMORY & LOGIC
 # ==========================================================
-# Köhnə mesajları göstər (Dizayn tam bu sətirdə başlayır)
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-        # Əgər mesajda şəkil varsa, onu eynilə WhatsApp kimi göstər
-        if "image" in message and message["image"]:
-            st.image(message["image"], width=300)
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+if "current_img" not in st.session_state:
+    st.session_state.current_img = None
 
-# Giriş hissəsi (accept_file=True avtomatik '+' ikonası yaradır)
-prompt = st.chat_input("Mesajınızı yazın...", accept_file=True)
+# Tarixçəni göstər
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(f"**{msg['content']}**")
+        if "image" in msg and msg["image"]:
+            st.image(msg["image"], width=400)
+
+# INPUT: Sürətli fayl yükləmə və mətn
+prompt = st.chat_input("Zəka Ultra əmrinizdədir, Memar...", accept_file=True)
 
 if prompt:
     user_text = prompt.text if prompt.text else "Bu təsviri professional analiz et."
     active_file = prompt.files[0] if prompt.files else None
     
-    # 🧠 Sənin şəklin neçə analiz etdiyimi burada sistemə yükləyirəm
-    SYSTEM_INSTRUCTION = """
-    Sən Abdullah Mikayılov tərəfindən yaradılmış ZƏKA ULTRA-san. 
-    İl 2026. Sən bir şəkli belə analiz edirsən:
-    1.  **Giriş:** Şəkil daxil olan kimi detalları dərhal ayırd edirsən.
-    2.  **Vizual Detallar:** Rənglər, kompozisiya, əsas mövzu və arxa planı təsvir edirsən.
-    3.  **Məna:** Şəklin nə ifadə etdiyini, hansı mənanı verdiyini professional Azərbaycan dilində kəsərli izah edirsən.
-    Cavabı həmişə Abdullahın vizyonuna uyğun, soyuqqanlı, dəqiq və professional ver.
-    """
+    if active_file:
+        st.session_state.current_img = Image.open(active_file)
 
-    # İstifadəçi mesajını ekrana və yaddaşa yaz
     st.session_state.messages.append({"role": "user", "content": user_text, "image": active_file})
+    
     with st.chat_message("user"):
         st.markdown(user_text)
         if active_file:
-            st.image(Image.open(active_file), width=300)
+            st.image(st.session_state.current_img, width=400)
 
-    # Cavab mexanizmi
+    # 🚀 VƏHŞİ ANALİZ BAŞLADI
     with st.chat_message("assistant"):
-        with st.status("🚀 Düşünürəm...", expanded=True) as status:
+        placeholder = st.empty()
+        with st.status("🔮 Kvant Hesablama Gedir...", expanded=False) as status:
             try:
-                # 1. Prioritet: Əgər yeni şəkil atılıbsa, onu yaddaşa sal və analiz et
-                if active_file and vision_model:
-                    img = Image.open(active_file)
-                    st.session_state.current_image = img # Daimi yaddaşa sal
-                    st.write("🔍 Media analizi gedir...")
-                    response = vision_model.generate_content([SYSTEM_INSTRUCTION, user_text, img]).text
-                # 2. Əgər yaddaşda köhnə şəkil varsa, onu analiz et
-                elif st.session_state.current_image and vision_model:
-                    st.write("🔍 Yaddaşdakı media analizi gedir...")
-                    response = vision_model.generate_content([SYSTEM_INSTRUCTION, user_text, st.session_state.current_image]).text
-                # 3. Yoxdursa, ancaq mətni analiz et
+                if active_file or st.session_state.current_img:
+                    # GEMINI FLASH - Şəkil üçün
+                    target_img = st.session_state.current_img
+                    response = vision_model.generate_content([SYSTEM_PROMPT, user_text, target_img]).text
                 else:
-                    st.write("⚡ Mətn analizi...")
-                    st.error("Kritik Xəta: Gemini Şəkil Mühərriki hazır deyil. Ancaq mətn analiz edilə bilər.")
-                    response = "Şəkil yüklənmədi və ya mühərrik hazır deyil."
-                
-                status.update(label="Tamamlandı!", state="complete")
+                    # GROQ LLAMA 3.3 - Mətn üçün (Saniyədə 500 söz sürəti)
+                    history = [{"role": "system", "content": SYSTEM_PROMPT}]
+                    for m in st.session_state.messages[-6:]:
+                        history.append({"role": m["role"], "content": m["content"]})
+                    
+                    chat_completion = groq_client.chat.completions.create(
+                        model="llama-3.3-70b-versatile",
+                        messages=history,
+                        temperature=0.3
+                    )
+                    response = chat_completion.choices[0].message.content
+
+                status.update(label="Analiz Tamamlandı!", state="complete")
                 st.markdown(response)
                 st.session_state.messages.append({"role": "assistant", "content": response})
-                
-            except Exception as e:
-                status.update(label="Xəta!", state="error")
-                st.error(f"Süni İntellekt Xətası: {str(e)}")
 
-# Avtomatik scroll (Səhifəni aşağı çək)
+            except Exception as e:
+                status.update(label="Sistem Xətası!", state="error")
+                st.error(f"Xəta: {str(e)}")
+
+# Avtomatik aşağı çəkmə
 st.markdown('<script>window.scrollTo(0, document.body.scrollHeight);</script>', unsafe_allow_html=True)
