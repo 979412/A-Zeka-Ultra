@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A-ZEKA-ULTRA | Abdullah Mikayilov</title>
+    <style>
+        body { background: #0f172a; color: #f8fafc; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .chat-container { width: 90%; max-width: 600px; background: #1e293b; border-radius: 15px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); border: 1px solid #334155; }
+        h1 { color: #38bdf8; text-align: center; font-size: 1.5rem; margin-bottom: 20px; }
+        #chat-box { height: 300px; overflow-y: auto; border-bottom: 1px solid #334155; padding-bottom: 10px; margin-bottom: 15px; }
+        input { width: 80%; padding: 10px; border-radius: 5px; border: none; outline: none; background: #334155; color: white; }
+        button { padding: 10px 15px; border: none; border-radius: 5px; background: #38bdf8; color: #0f172a; font-weight: bold; cursor: pointer; }
+        .bot-msg { color: #38bdf8; margin: 10px 0; font-weight: bold; }
+        .user-msg { color: #94a3b8; margin: 10px 0; }
+    </style>
+</head>
+<body>
+
+    <div class="chat-container">
+        <h1>🚀 A-ZEKA-ULTRA</h1>
+        <div id="chat-box">
+            <div class="bot-msg">Sistem: Hazıram, Abdullah Mikayilov! Sualını gözləyirəm.</div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <input type="text" id="user-input" placeholder="Dahi sualını bura yaz...">
+            <button onclick="sendMessage()">GÖNDƏR</button>
+        </div>
+    </div>
+
+    <script>
+        function sendMessage() {
+            let input = document.getElementById('user-input');
+            let chatBox = document.getElementById('chat-box');
+            if(input.value === "") return;
+
+            chatBox.innerHTML += `<div class="user-msg">Sən: ${input.value}</div>`;
+            
+            // Bura gələcəkdə GitHub API-ni bağlayacağıq
+            setTimeout(() => {
+                chatBox.innerHTML += `<div class="bot-msg">A-ZEKA-ULTRA: Təhlil edilir... (Bu bölmə tezliklə aktiv olacaq!)</div>`;
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }, 1000);
+
+            input.value = "";
+        }
+    </script>
+</body>
+</html>
